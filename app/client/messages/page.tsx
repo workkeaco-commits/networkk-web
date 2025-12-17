@@ -527,9 +527,17 @@ export default function ClientMessagesPage() {
       setLoadingMessages(true);
       const { data, error } = await supabase.from("messages").select("*")
         .eq("conversation_id", selectedConversation.id).order("created_at", { ascending: true });
-      if (cancelled) return;
-      if (error) setMessages([]); else setMessages((data || []) as MessageRow);
-      setLoadingMessages(false);
+    if (cancelled) return;
+
+    if (error) {
+      setMessages([]);
+    } else {
+      const msgs = (data || []) as unknown as MessageRow[];
+      setMessages(msgs);
+    }
+
+    setLoadingMessages(false);
+
     };
     loadMessages();
 
