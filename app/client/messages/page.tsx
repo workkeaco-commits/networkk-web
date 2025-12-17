@@ -501,7 +501,8 @@ export default function ClientMessagesPage() {
       if (cancelled) return;
       if (error) { setConversations([]); setLoadingConversations(false); return; }
 
-      const convs = (data || []) as Conversation[];
+      const convs = (data || []) as unknown as Conversation[];
+
       setConversations(convs); setLoadingConversations(false);
 
       const qsId = searchParams.get("conversation");
