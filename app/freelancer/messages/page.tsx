@@ -17,10 +17,12 @@ function sumMilestones(ms: Array<{ amount_gross?: number | null }>) {
     0
   );
 }
+
 const toNum = (s: string) => {
   const n = Number((s || "").replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
 };
+
 const money = (n: number, maxFrac = 2) =>
   (Math.round(n * 100) / 100).toLocaleString("en-US", {
     maximumFractionDigits: maxFrac,
@@ -144,7 +146,7 @@ function OfferViewerModal({
 
       if (cancelled) return;
 
-      if (error) {
+      if (error || !data) {
         setProposal(null);
         return;
       }
@@ -180,7 +182,10 @@ function OfferViewerModal({
   // totals (edit mode)
   const totalPriceNum = toNum(totalPrice);
   const editSumMilestones = rows.reduce((acc, r) => acc + toNum(r.amount), 0);
-  const editSumFee = rows.reduce((acc, r) => acc + toNum(r.amount) * feeRate, 0);
+  const editSumFee = rows.reduce(
+    (acc, r) => acc + toNum(r.amount) * feeRate,
+    0
+  );
   const editSumNet = editSumMilestones - editSumFee;
 
   // validations
@@ -692,7 +697,7 @@ export default function FreelancerMessagesPage() {
         return;
       }
 
-      setFreelancer(data as Freelancer);
+      setFreelancer(data as unknown as Freelancer);
       setAuthChecking(false);
     })();
 
@@ -722,7 +727,7 @@ export default function FreelancerMessagesPage() {
         `
         )
         .eq("freelancer_id", freelancer.freelancer_id)
-        .order("last_message_at", { ascending: false, nullsLast: true });
+        .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (cancelled) return;
 
@@ -732,7 +737,7 @@ export default function FreelancerMessagesPage() {
         return;
       }
 
-      const convs = (data || []) as Conversation[];
+      const convs = (data || []) as unknown as Conversation[];
       setConversations(convs);
       setLoadingConversations(false);
 
@@ -780,7 +785,7 @@ export default function FreelancerMessagesPage() {
 
           if (error || !data) return;
 
-          const conv = data as Conversation;
+          const conv = data as unknown as Conversation;
 
           setConversations((prev) =>
             prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev]
@@ -841,8 +846,12 @@ export default function FreelancerMessagesPage() {
         .order("created_at", { ascending: true });
 
       if (!cancelled) {
-        if (error) setMessages([]);
-        else setMessages((data || []) as MessageRow[]);
+        if (error) {
+          setMessages([]);
+        } else {
+          const msgs = (data || []) as unknown as MessageRow[];
+          setMessages(msgs);
+        }
         setLoadingMessages(false);
         setNewConversationIds((prev) => {
           const copy = { ...prev };
@@ -874,8 +883,12 @@ export default function FreelancerMessagesPage() {
         .limit(1);
 
       if (!cancelled) {
-        if (error) setActiveProposal(null);
-        else setActiveProposal((data && data[0]) || null);
+        if (error || !data || !data[0]) {
+          setActiveProposal(null);
+        } else {
+          const proposals = data as unknown as ProposalLite[];
+          setActiveProposal(proposals[0] ?? null);
+        }
       }
     };
 
@@ -928,7 +941,11 @@ export default function FreelancerMessagesPage() {
             .in("status", ["sent", "countered", "pending"])
             .order("created_at", { ascending: false })
             .limit(1);
-          setActiveProposal((data && data[0]) || null);
+
+          if (data && data[0]) {
+            const proposals = data as unknown as ProposalLite[];
+            setActiveProposal(proposals[0] ?? null);
+          }
         }
       )
       .subscribe();
@@ -944,7 +961,10 @@ export default function FreelancerMessagesPage() {
   useEffect(() => {
     if (!selectedConversation) return;
     if (!messagesEndRef.current) return;
-    messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    messagesEndRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
   }, [selectedConversation, messages.length]);
 
   // Mark seen
@@ -952,8 +972,12 @@ export default function FreelancerMessagesPage() {
     if (!freelancer || !selectedConversation || messages.length === 0) return;
     (async () => {
       try {
-        const { error } = await supabase.rpc("mark_messages_seen_as_freelancer");
-        if (error) console.error("mark_messages_seen_as_freelancer error", error);
+        const { error } = await supabase.rpc(
+          "mark_messages_seen_as_freelancer"
+        );
+        if (error) {
+          console.error("mark_messages_seen_as_freelancer error", error);
+        }
       } catch (err) {
         console.error("mark_messages_seen_as_freelancer threw", err);
       }
@@ -1150,10 +1174,13 @@ export default function FreelancerMessagesPage() {
                                 Offer • Proposal #{pid}
                               </span>
                               <span className="block text-[10px] opacity-80">
-                                {new Date(m.created_at).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {new Date(m.created_at).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
                               </span>
                             </button>
                           </div>
