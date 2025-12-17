@@ -668,7 +668,14 @@ useEffect(() => {
                 {conversations.map((c) => {
                   const isActive = selectedConversation?.id === c.id;
                   const lastTime = c.last_message_at || c.created_at;
-                  const name = displayFreelancerName(c.freelancer);
+                  const name = displayFreelancerName(
+                  (c.freelancer ?? undefined) as {
+                    full_name?: string | null;
+                    first_name?: string | null;
+                    last_name?: string | null;
+                  } | undefined
+                );
+
                   const jobTitle = c.job_posts?.title || `Job #${c.job_post_id}`;
 
                   return (
