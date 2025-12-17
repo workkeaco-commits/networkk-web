@@ -564,9 +564,14 @@ export default function ClientMessagesPage() {
             freelancer:freelancer_id ( full_name, first_name, last_name, personal_img_url )
           `).eq("id", newId).single();
           if (error || !data) return;
-          const conv = data as Conversation;
-          setConversations((prev) => (prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev]));
+
+          const conv = data as unknown as Conversation;
+
+          setConversations((prev) =>
+            prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev]
+          );
           setSelectedConversation((current) => current ?? conv);
+
         }
       )
       .on("postgres_changes",
