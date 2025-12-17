@@ -1,62 +1,87 @@
 // app/api/proposals/[id]/respond/route.ts
-import { NextResponse } from "next/server";
+
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/supabase/server";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const { action, actor, actor_auth_id } = await req.json(); // <-- actor_auth_id NEW
-    const id = Number(params.id);
-    if (!Number.isFinite(id)) return NextResponse.json({ error: "Bad id" }, { status: 400 });
+type RespondBody = {
+  action?: string;                // e.g. "respond" | "accept" | "reject" | "confirm"
+  actor?: string;                 // e.g. "client" | "freelancer" or a user label
+  actor_auth_id?: string | null;  // Supabase auth user id of the actor (if you use it)
+};
 
-    const { data: prop, error: eProp } = await supabaseAdmin
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Next 16 types wrap params in a Promise, so we await it
+    const { id } = await context.params;
+    const proposalId = Number(id);
+
+    if (!Number.isFinite(proposalId)) {
+      return NextResponse.json(
+        { error: "Invalid proposal ID" },
+        { status: 400 }
+      );
+    }
+
+    const body = (await request.json()) as RespondBody;
+    const { action, actor, actor_auth_id } = body;
+
+    if (!action) {
+      return NextResponse.json(
+        { error: "Missing 'action' in request body" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch proposal – adjust selected columns to match your schema
+    const { data: proposal, error: proposalError } = await supabaseAdmin
       .from("proposals")
       .select("proposal_id, conversation_id")
-      .eq("proposal_id", id)
+      .eq("proposal_id", proposalId)
       .single();
-    if (eProp || !prop) return NextResponse.json({ error: eProp?.message || "Proposal not found" }, { status: 404 });
 
-    if (action === "reject") {
-      const { error } = await supabaseAdmin
-        .from("proposals")
-        .update({ status: "rejected", rejected_by: actor, decided_at: new Date().toISOString() })
-        .eq("proposal_id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-      if (prop.conversation_id && actor_auth_id) {
-        await supabaseAdmin.from("messages").insert({
-          conversation_id: prop.conversation_id,
-          sender_auth_id: actor_auth_id,
-          sender_role: actor,
-          body: `Offer rejected by ${actor} (Proposal #${prop.proposal_id}).`,
-        });
-        await supabaseAdmin.from("conversations")
-          .update({ last_message_at: new Date().toISOString() })
-          .eq("id", prop.conversation_id);
-      }
-      return NextResponse.json({ ok: true });
+    if (proposalError || !proposal) {
+      return NextResponse.json(
+        { error: proposalError?.message || "Proposal not found" },
+        { status: 404 }
+      );
     }
 
-    if (action === "accept") {
-      const patch = actor === "client" ? { accepted_by_client: true } : { accepted_by_freelancer: true };
-      const { error } = await supabaseAdmin.from("proposals").update(patch).eq("proposal_id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    // Prepare update payload based on action
+    const update: Record<string, any> = {
+      status: action, // you can map action -> status if you use different field names
+    };
 
-      if (prop.conversation_id && actor_auth_id) {
-        await supabaseAdmin.from("messages").insert({
-          conversation_id: prop.conversation_id,
-          sender_auth_id: actor_auth_id,
-          sender_role: actor,
-          body: `Offer accepted by ${actor} (Proposal #${prop.proposal_id}).`,
-        });
-        await supabaseAdmin.from("conversations")
-          .update({ last_message_at: new Date().toISOString() })
-          .eq("id", prop.conversation_id);
-      }
-      return NextResponse.json({ ok: true });
+    if (actor) update.last_action_by = actor;
+    if (actor_auth_id) update.last_actor_auth_id = actor_auth_id;
+
+    const { error: updateError } = await supabaseAdmin
+      .from("proposals")
+      .update(update)
+      .eq("proposal_id", proposalId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: updateError.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+    // (Optional) touch conversation's last_message_at if your schema has it
+    if (proposal.conversation_id) {
+      await supabaseAdmin
+        .from("conversations")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", proposal.conversation_id);
+    }
+
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Internal server error" },
+      { status: 500 }
+    );
   }
 }
