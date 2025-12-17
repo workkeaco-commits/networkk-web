@@ -633,7 +633,10 @@ useEffect(() => {
     );
   }
 
-  const selectedFreelancerName = displayFreelancerName(selectedConversation?.freelancer);
+  const selectedFreelancerName = displayFreelancerName(
+  selectedConversation?.freelancer ?? undefined
+);
+
 
   return (
     <main className="min-h-screen bg-slate-50">
