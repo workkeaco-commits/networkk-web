@@ -488,7 +488,8 @@ export default function ClientMessagesPage() {
         id, job_post_id, freelancer_id, created_at, last_message_at,
         job_posts:job_post_id ( title ),
         freelancer:freelancer_id ( ${fields} )
-      `).eq("client_id", client.client_id).order("last_message_at", { ascending: false, nullsLast: true });
+      `).eq("client_id", client.client_id).order("last_message_at", { ascending: false, nullsFirst: false });
+
     };
 
     const loadConversations = async () => {
