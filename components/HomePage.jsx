@@ -15,6 +15,8 @@ import {
   Shield,
   Rocket,
 } from "lucide-react";
+import Link from "next/link";
+
 import Image from "next/image";
 
 import { useState, useEffect } from "react";
@@ -126,9 +128,14 @@ export default function HomePage() {
             </nav>
 
             {/* CTA button – smaller & thinner */}
-            <button className="border border-[#00BFA5] text-[#00BFA5] px-5 py-1.5 rounded-full text-sm font-medium bg-transparent hover:bg-white/10">
-              Get Started
-            </button>
+{/* CTA button – smaller & thinner */}
+<Link
+  href="/client/signup"
+  className="border border-[#00BFA5] text-[#00BFA5] px-5 py-1.5 rounded-full text-sm font-medium bg-transparent hover:bg-white/10 inline-flex items-center justify-center"
+>
+  Get Started
+</Link>
+
           </div>
         </div>
       </header>
