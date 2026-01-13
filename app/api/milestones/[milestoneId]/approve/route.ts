@@ -19,7 +19,7 @@ type MilestoneRow = {
   milestone_id: number;
   amount_gross: number | string | null;
   contract_id: number;
-  contracts?: ContractRow | null;
+  contracts?: ContractRow | ContractRow[] | null;
 };
 
 export async function POST(
@@ -60,7 +60,10 @@ export async function POST(
       return NextResponse.json({ error: milestoneErr?.message || "Milestone not found" }, { status: 404 });
     }
 
-    const contract = (milestone as MilestoneRow).contracts as ContractRow | null;
+    const milestoneRow = milestone as MilestoneRow;
+    const contract = Array.isArray(milestoneRow.contracts)
+      ? milestoneRow.contracts[0] ?? null
+      : milestoneRow.contracts ?? null;
     if (!contract) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
@@ -100,7 +103,7 @@ export async function POST(
     }
 
     const nowIso = new Date().toISOString();
-    const gross = toMoney((milestone as MilestoneRow).amount_gross);
+    const gross = toMoney(milestoneRow.amount_gross);
     const feePercent = toPercent(contract.platform_fee_percent ?? 10);
     const net = roundMoney(gross * (1 - feePercent / 100));
 
