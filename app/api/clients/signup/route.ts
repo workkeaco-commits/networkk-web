@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
         type: "signup",
         email,
+        password,
         options: { redirectTo },
       });
 
