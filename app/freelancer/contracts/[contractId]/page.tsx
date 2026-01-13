@@ -39,8 +39,11 @@ type ContractRow = {
   created_at: string;
   fees_total: number | null;
   currency: string | null;
-  job_posts?: { title: string | null } | null;
-  clients?: { first_name?: string | null; last_name?: string | null; company_name?: string | null; client_id?: number | null } | null;
+  job_posts?: { title: string | null }[] | { title: string | null } | null;
+  clients?:
+    | { first_name?: string | null; last_name?: string | null; company_name?: string | null; client_id?: number | null }[]
+    | { first_name?: string | null; last_name?: string | null; company_name?: string | null; client_id?: number | null }
+    | null;
 };
 
 function formatMoney(amount: number | null, currency: string | null) {
@@ -240,12 +243,24 @@ export default function FreelancerContractDetailPage() {
     setSyncing(false);
   }
 
+  const clientInfo = useMemo(() => {
+    const client = contract?.clients;
+    if (!client) return null;
+    return Array.isArray(client) ? client[0] ?? null : client;
+  }, [contract]);
+
   const clientName = useMemo(() => {
     return (
-      contract?.clients?.company_name?.trim() ||
-      [contract?.clients?.first_name, contract?.clients?.last_name].filter(Boolean).join(" ").trim() ||
-      `Client #${contract?.clients?.client_id ?? "?"}`
+      clientInfo?.company_name?.trim() ||
+      [clientInfo?.first_name, clientInfo?.last_name].filter(Boolean).join(" ").trim() ||
+      `Client #${clientInfo?.client_id ?? "?"}`
     );
+  }, [clientInfo]);
+
+  const jobTitle = useMemo(() => {
+    const jobPosts = contract?.job_posts;
+    if (!jobPosts) return null;
+    return Array.isArray(jobPosts) ? jobPosts[0]?.title ?? null : jobPosts.title ?? null;
   }, [contract]);
 
   if (loading) {
@@ -271,7 +286,7 @@ export default function FreelancerContractDetailPage() {
             </Link>
             <div>
               <div className="text-lg font-semibold">Contract details</div>
-              <div className="text-xs text-gray-500">{contract?.job_posts?.title || "Untitled contract"}</div>
+              <div className="text-xs text-gray-500">{jobTitle || "Untitled contract"}</div>
             </div>
           </div>
 
@@ -295,7 +310,7 @@ export default function FreelancerContractDetailPage() {
                     <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-gray-900">{contract?.job_posts?.title}</div>
+                    <div className="text-lg font-semibold text-gray-900">{jobTitle}</div>
                     <div className="text-sm text-gray-500">With {clientName}</div>
                   </div>
                 </div>
