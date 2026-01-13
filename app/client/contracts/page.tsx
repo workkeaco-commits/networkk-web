@@ -20,8 +20,11 @@ type ContractRow = {
   fees_total: number | null;
   currency: string | null;
   created_at: string;
-  job_posts?: { title: string | null } | null;
-  freelancers?: { first_name?: string | null; last_name?: string | null; freelancer_id?: number | null } | null;
+  job_posts?: { title: string | null }[] | { title: string | null } | null;
+  freelancers?:
+    | { first_name?: string | null; last_name?: string | null; freelancer_id?: number | null }[]
+    | { first_name?: string | null; last_name?: string | null; freelancer_id?: number | null }
+    | null;
   milestones?: MilestoneRow[] | null;
 };
 
@@ -106,7 +109,7 @@ export default function ClientContractsPage() {
         setErrorMsg("Could not load contracts.");
         setContracts([]);
       } else {
-        setContracts((data as ContractRow[]) || []);
+        setContracts((data ?? []) as ContractRow[]);
       }
 
       setLoading(false);
@@ -171,10 +174,16 @@ export default function ClientContractsPage() {
           ) : (
             <div className="grid gap-6">
               {contracts.map((c) => {
-                const freelancerName = [c.freelancers?.first_name, c.freelancers?.last_name]
+                const freelancerInfo = Array.isArray(c.freelancers)
+                  ? c.freelancers[0] ?? null
+                  : c.freelancers ?? null;
+                const freelancerName = [freelancerInfo?.first_name, freelancerInfo?.last_name]
                   .filter(Boolean)
                   .join(" ")
                   .trim();
+                const jobTitle = Array.isArray(c.job_posts)
+                  ? c.job_posts[0]?.title ?? null
+                  : c.job_posts?.title ?? null;
                 const nextDue = getNextDue(c.milestones);
                 const statusLabel = (c.status || "active").toString();
 
@@ -192,7 +201,7 @@ export default function ClientContractsPage() {
                           </div>
                           <div>
                             <h3 className="text-[21px] font-semibold text-[#1d1d1f] leading-tight mb-1">
-                              {c.job_posts?.title || "Untitled contract"}
+                              {jobTitle || "Untitled contract"}
                             </h3>
                             <div className="flex items-center gap-2">
                               <span
@@ -217,7 +226,7 @@ export default function ClientContractsPage() {
                             </span>
                             <div className="flex items-center gap-2 text-[15px] text-[#1d1d1f] font-semibold">
                               <User className="w-3.5 h-3.5 text-[#86868b]" />
-                              {freelancerName || `Freelancer #${c.freelancers?.freelancer_id ?? "?"}`}
+                              {freelancerName || `Freelancer #${freelancerInfo?.freelancer_id ?? "?"}`}
                             </div>
                           </div>
                           <div className="flex flex-col">
