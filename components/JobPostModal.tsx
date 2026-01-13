@@ -22,6 +22,7 @@ interface JobPostModalProps {
   job: any;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
 type Applicant = {
