@@ -15,7 +15,7 @@ type WalletRow = {
 
 type ContractRow = {
   contract_id: number;
-  job_posts?: { title: string | null } | null;
+  job_posts?: { title: string | null }[] | { title: string | null } | null;
 };
 
 type PaymentRow = {
@@ -100,7 +100,9 @@ export default function ClientFinancialsPage() {
       const contractIds = (contracts || []).map((c) => c.contract_id);
       const titleMap: Record<number, string> = {};
       for (const c of contracts || []) {
-        titleMap[c.contract_id] = c.job_posts?.title || "Untitled contract";
+        const jobPosts = (c as ContractRow).job_posts;
+        const title = Array.isArray(jobPosts) ? jobPosts[0]?.title ?? null : jobPosts?.title ?? null;
+        titleMap[c.contract_id] = title || "Untitled contract";
       }
       setContractTitles(titleMap);
 
