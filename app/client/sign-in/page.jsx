@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/browser";
 
 export default function ClientSignInPage() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/client/dashboard";
-
 
   const [errorMsg, setErrorMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -25,6 +25,11 @@ export default function ClientSignInPage() {
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      if (!data.user.email_confirmed_at && !data.user.confirmed_at) {
+        await supabase.auth.signOut();
+        throw new Error("Please verify your email before signing in.");
+      }
 
       // Optional: ensure this user is actually a "client"
       const { data: roleRow, error: roleErr } = await supabase
@@ -46,60 +51,81 @@ export default function ClientSignInPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <section className="w-full max-w-4xl bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
-        <div className="flex flex-col md:flex-row">
-          <div className="flex-1 flex items-center justify-center p-10">
-            <div className="space-y-4">
-              <Image src="/chatgpt-instructions3.jpeg" alt="Networkk" width={128} height={50} className="h-10 w-auto" />
-              <p className="text-sm text-slate-500">Sign in to post a job and hire freelancers.</p>
-            </div>
-          </div>
-
-          <div className="hidden md:block w-px bg-slate-200" />
-
-          <div className="flex-1 p-8 md:p-10">
-            <p className="text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase mb-2">Client sign in</p>
-            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-1">Welcome back</h1>
-            <p className="text-sm text-slate-500 mb-6">Use your client email and password.</p>
-
-            {errorMsg && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {errorMsg}
-              </div>
-            )}
-
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-                <input id="email" name="email" type="email" autoComplete="email" placeholder="you@company.com"
-                  className="block w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-2.5 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
-                <input id="password" name="password" type="password" autoComplete="current-password"
-                  className="block w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-2.5 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500" />
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="mt-2 inline-flex w-full items-center justify-center rounded-xl 
-                  bg-[#079c02] px-4 py-2.5 text-sm font-semibold text-white shadow-sm 
-                  transition hover:bg-[#056b01] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {submitting ? "Signing in..." : "Sign in"}
-              </button>
-            </form>
-
-            <p className="mt-4 text-xs text-slate-500">
-              Don’t have a client account?{" "}
-              <a href="/client/signup" className="text-[#079c02] hover:underline">Create one</a>
-            </p>
-          </div>
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen flex flex-col justify-center">
+      <main className="max-w-[480px] w-full mx-auto px-6 py-12 animate-fade-in">
+        <div className="text-center mb-10">
+          <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
+            Client Portal
+          </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
+            Welcome back
+          </h1>
+          <p className="text-lg text-gray-500 font-medium leading-relaxed">
+            Sign in to manage your jobs and hire freelancers.
+          </p>
         </div>
-      </section>
-    </main>
+
+        {errorMsg && (
+          <div className="mb-6 rounded-2xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-red-600 animate-fade-in">
+            {errorMsg}
+          </div>
+        )}
+
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-[13px] font-medium text-gray-500 ml-1">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@company.com"
+              className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-[13px] font-medium text-gray-500 ml-1">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all"
+            />
+          </div>
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline font-medium">
+              Forgot password?
+            </Link>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[20px] py-4 text-[17px] shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? "Signing in..." : "Sign in"}
+            {!submitting && (
+              <ChevronRight
+                className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                strokeWidth={2.5}
+              />
+            )}
+          </button>
+        </form>
+
+        <p className="mt-8 text-center text-sm text-gray-400">
+          Don’t have a client account?{" "}
+          <Link href="/client/signup" className="text-blue-600 hover:underline font-medium">
+            Create one
+          </Link>
+        </p>
+      </main>
+    </div>
   );
 }

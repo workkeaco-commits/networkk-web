@@ -7,7 +7,8 @@ import { supabase } from "@/lib/supabase/browser";
 
 type FreelancerRow = {
   freelancer_id: number;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   personal_img_url: string | null;
   job_title: string | null;
   skills: string | null; // comma-separated
@@ -23,6 +24,12 @@ function initials(name: string) {
       .map((p) => p[0]?.toUpperCase() || "")
       .join("") || "F"
   );
+}
+
+function displayFreelancerName(f: FreelancerRow | null) {
+  if (!f) return "Freelancer";
+  const name = [f.first_name, f.last_name].filter(Boolean).join(" ").trim();
+  return name || `Freelancer #${f.freelancer_id}`;
 }
 
 export default function InviteFreelancersPage() {
@@ -289,7 +296,7 @@ export default function InviteFreelancersPage() {
           <ul className="grid gap-3">
             {rows.map((f) => {
               const name =
-                f.full_name?.trim() || `Freelancer #${f.freelancer_id}`;
+                displayFreelancerName(f);
               const skillBadges =
                 (f.skills || "")
                   .split(",")
@@ -389,8 +396,7 @@ export default function InviteFreelancersPage() {
                 <p className="text-xs text-slate-500">
                   To:{" "}
                   <span className="font-medium">
-                    {selectedFreelancer.full_name?.trim() ||
-                      `Freelancer #${selectedFreelancer.freelancer_id}`}
+                    {displayFreelancerName(selectedFreelancer)}
                   </span>
                 </p>
               </div>

@@ -5,10 +5,16 @@ import { supabaseAdmin } from '../.././../lib/supabase/supabase/server';
 export async function POST() {
   // upsert a client + freelancer + a job post
   await supabaseAdmin.from('clients')
-    .upsert({ client_id: 1, name: 'ACME', email: 'ops@acme.com' });
+    .upsert({
+      client_id: 1,
+      first_name: 'Ava',
+      last_name: 'Client',
+      company_name: 'ACME',
+      email: 'ops@acme.com'
+    });
 
   await supabaseAdmin.from('freelancers')
-    .upsert({ freelancer_id: 1, full_name: 'Sara Nabil', email: 'sara@example.com', job_title: 'Frontend Dev' });
+    .upsert({ freelancer_id: 1, first_name: 'Sara', last_name: 'Nabil', email: 'sara@example.com', job_title: 'Frontend Dev' });
 
   await supabaseAdmin.from('job_posts').insert({
     client_id: 1,

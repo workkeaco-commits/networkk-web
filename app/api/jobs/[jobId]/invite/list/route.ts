@@ -30,7 +30,7 @@ export async function GET(
     }
 
     // 2) Fetch freelancers without assuming specific name columns.
-    //    We select '*' so missing columns (first_name/last_name/full_name) won't crash.
+    //    We select '*' so missing columns (first_name/last_name) won't crash.
     let q = supabaseAdmin
       .from("freelancers")
       .select("*")

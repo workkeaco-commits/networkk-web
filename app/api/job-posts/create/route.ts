@@ -1,6 +1,8 @@
 // app/api/job-posts/create/route.ts
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase/supabase/server';
+import { sendEmail } from "@/lib/email/smtp";
+import { buildJobPostedEmail } from "@/lib/email/templates";
 
 export async function POST(req: Request) {
   try {
@@ -103,6 +105,29 @@ export async function POST(req: Request) {
         { error: { message: eIns.message } },
         { status: 400 }
       );
+    }
+
+    const { data: clientRow } = await supabaseAdmin
+      .from("clients")
+      .select("first_name, last_name, company_name, email")
+      .eq("client_id", clientId)
+      .maybeSingle();
+
+    if (clientRow?.email) {
+      const jobEmail = buildJobPostedEmail({
+        person: {
+          firstName: clientRow.first_name,
+          lastName: clientRow.last_name,
+          companyName: clientRow.company_name,
+        },
+        jobTitle: title,
+        budget: { amount: priceNum, currency: price_currency },
+      });
+      try {
+        await sendEmail({ to: clientRow.email, ...jobEmail });
+      } catch (err) {
+        console.error("[job-posts/create] job email failed:", err);
+      }
     }
 
     return NextResponse.json(

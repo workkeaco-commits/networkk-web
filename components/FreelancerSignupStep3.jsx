@@ -1,200 +1,169 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { Plus, Upload } from "lucide-react";
+import { GraduationCap, BookOpen, Plus, X, Camera, ShieldCheck, ChevronRight, UploadCloud } from "lucide-react";
+import SiteHeader from "@/components/SiteHeader";
 
 export default function FreelancerSignupStep3({ onBack, onNext, submitting = false }) {
-  const todayMonth = new Date().toISOString().slice(0, 7);
-  const [educationStatus, setEducationStatus] = useState("degree"); // "degree" | "student"
-  const [certificates, setCertificates] = useState([0]);
-  const [profileImagePreview, setProfileImagePreview] = useState(null);
-  const [idImagePreview, setIdImagePreview] = useState(null);
+  const [eduStatus, setEduStatus] = useState("graduated"); // "graduated" | "student" | "none"
+  const [certs, setCerts] = useState([0]);
+  const [profilePreview, setProfilePreview] = useState(null);
+  const [idPreview, setIdPreview] = useState(null);
 
-  function handleAddCertificate() {
-    setCertificates((prev) => {
-      const newId = prev.length ? Math.max(...prev) + 1 : 0;
-      return [...prev, newId];
-    });
+  function handleAddCert() {
+    setCerts((prev) => [...prev, prev.length ? Math.max(...prev) + 1 : 0]);
   }
-  function handleDeleteCertificate(id) {
-    setCertificates((prev) => (prev.length > 1 ? prev.filter((c) => c !== id) : prev));
+  function handleDeleteCert(v) {
+    setCerts((prev) => prev.filter((c) => c !== v));
   }
 
-  function handleProfileImageChange(e) {
+  function handleFileChange(e, type) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setProfileImagePreview(URL.createObjectURL(file));
-  }
-  function handleIdImageChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIdImagePreview(URL.createObjectURL(file));
+    const url = URL.createObjectURL(file);
+    if (type === "profile") setProfilePreview(url);
+    if (type === "id") setIdPreview(url);
   }
 
   function handleSubmit(e) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
 
-    // Build education object
-    const edu =
-      educationStatus === "degree"
-        ? {
-            status: "degree",
-            degreeType: (fd.get("degreeType") || "").toString().trim(),
-            degreeDate: (fd.get("degreeDate") || "").toString() || null, // YYYY-MM
-          }
-        : {
-            status: "student",
-            studyProgram: (fd.get("studyProgram") || "").toString().trim(),
-            expectedGradDate: (fd.get("expectedGradDate") || "").toString() || null, // YYYY-MM
-          };
+    const education = {
+      status: eduStatus,
+      university: (fd.get("university") || "").toString().trim(),
+      degree: (fd.get("degree") || "").toString().trim(),
+      graduationYear: (fd.get("graduationYear") || "").toString().trim(),
+    };
 
-    // Build certificates array from rendered indices
-    const certs = certificates
-      .map((cid, index) => ({
-        name: (fd.get(`certificateName-${index}`) || "").toString().trim(),
-        notes: (fd.get(`certificateSkills-${index}`) || "").toString().trim(),
-      }))
-      .filter((c) => c.name); // keep only filled rows
+    const certList = certs.map((cid, index) => ({
+      name: (fd.get(`certName-${index}`) || "").toString().trim(),
+      org: (fd.get(`certOrg-${index}`) || "").toString().trim(),
+      year: (fd.get(`certYear-${index}`) || "").toString().trim(),
+    })).filter(c => c.name || c.org);
 
-    // Files
     const profileImage = fd.get("profileImage");
     const nationalIdImage = fd.get("nationalIdImage");
 
-    onNext({ education: edu, certificates: certs, profileImage, nationalIdImage });
+    onNext({ education, certificates: certList, profileImage, nationalIdImage });
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <section className="w-full max-w-4xl bg-white rounded-3xl shadow-lg border border-slate-200 px-6 py-6 md:px-10 md:py-8">
-        <div className="mb-10">
-          <Image src="/chatgpt-instructions3.jpeg" alt="Networkk" width={128} height={50} className="h-8 w-auto" />
-        </div>
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-20 pb-20">
+      <SiteHeader />
 
-        <div className="mb-6 space-y-1">
-          <p className="text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">Step 3 of 3</p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">Education, certificates & verification</h1>
-          <p className="text-sm text-slate-500 max-w-xl">
-            Tell us about your education and courses, then upload your personal photo and national ID.
+      <main className="max-w-[720px] mx-auto px-6 py-12 animate-fade-in">
+        <div className="text-center mb-12">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Camera className="w-8 h-8" strokeWidth={1.5} />
+          </div>
+          <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">Step 3 of 3</p>
+          <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
+            Finalize your profile
+          </h1>
+          <p className="text-lg text-gray-500 font-medium leading-relaxed">
+            Verify your identity and add your educational background.
           </p>
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* EDUCATION */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">Education</label>
-            <div className="flex flex-col sm:flex-row gap-3 mt-1">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="radio"
-                  name="educationStatus"
-                  value="degree"
-                  checked={educationStatus === "degree"}
-                  onChange={() => setEducationStatus("degree")}
-                  className="h-4 w-4 text-[#079c02] border-slate-300 focus:ring-[#079c02]"
-                />
-                <span>I have a degree</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="radio"
-                  name="educationStatus"
-                  value="student"
-                  checked={educationStatus === "student"}
-                  onChange={() => setEducationStatus("student")}
-                  className="h-4 w-4 text-[#079c02] border-slate-300 focus:ring-[#079c02]"
-                />
-                <span>I am currently a student</span>
-              </label>
+        <form className="space-y-12" onSubmit={handleSubmit}>
+          {/* EDUCATION SECTION */}
+          <div className="space-y-6 text-left">
+            <label className="text-[14px] font-semibold text-gray-900 ml-1">Education Status</label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setEduStatus("graduated")}
+                className={`flex flex-col items-center p-6 rounded-[32px] border-2 transition-all group ${eduStatus === "graduated" ? "border-blue-600 bg-white" : "border-gray-100 bg-gray-50/50 hover:border-gray-200"
+                  }`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-colors ${eduStatus === "graduated" ? "bg-blue-600 text-white" : "bg-white text-gray-400"
+                  }`}>
+                  <GraduationCap className="w-6 h-6" strokeWidth={1.5} />
+                </div>
+                <span className="font-semibold text-gray-900">Graduated</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEduStatus("student")}
+                className={`flex flex-col items-center p-6 rounded-[32px] border-2 transition-all group ${eduStatus === "student" ? "border-blue-600 bg-white" : "border-gray-100 bg-gray-50/50 hover:border-gray-200"
+                  }`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-colors ${eduStatus === "student" ? "bg-blue-600 text-white" : "bg-white text-gray-400"
+                  }`}>
+                  <BookOpen className="w-6 h-6" strokeWidth={1.5} />
+                </div>
+                <span className="font-semibold text-gray-900">Student</span>
+              </button>
             </div>
 
-            {educationStatus === "degree" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                <div>
-                  <label htmlFor="degreeType" className="block text-xs font-medium text-slate-700 mb-1">
-                    Type of degree
-                  </label>
+            {eduStatus !== "none" && (
+              <div className="space-y-4 pt-4 animate-fade-in">
+                <div className="space-y-2">
+                  <label htmlFor="university" className="text-[13px] font-medium text-gray-500 ml-1">University</label>
                   <input
-                    id="degreeType" name="degreeType" type="text" placeholder="e.g. BSc Computer Science"
-                    className="block w-full rounded-xl border border-slate-300 bg-slate-50/60 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    id="university" name="university" type="text" placeholder="e.g. Cairo University"
+                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all shadow-sm"
                   />
                 </div>
-                <div>
-                  <label htmlFor="degreeDate" className="block text-xs font-medium text-slate-700 mb-1">
-                    Date of certificate
-                  </label>
-                  <input
-                    id="degreeDate" name="degreeDate" type="month" max={todayMonth}
-                    className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-              </div>
-            )}
-
-            {educationStatus === "student" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                <div>
-                  <label htmlFor="studyProgram" className="block text-xs font-medium text-slate-700 mb-1">
-                    Program / major
-                  </label>
-                  <input
-                    id="studyProgram" name="studyProgram" type="text" placeholder="e.g. BSc Computer Engineering"
-                    className="block w-full rounded-xl border border-slate-300 bg-slate-50/60 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="expectedGradDate" className="block text-xs font-medium text-slate-700 mb-1">
-                    Expected graduation date (optional)
-                  </label>
-                  <input
-                    id="expectedGradDate" name="expectedGradDate" type="month" min={todayMonth}
-                    className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="degree" className="text-[13px] font-medium text-gray-500 ml-1">Degree</label>
+                    <input
+                      id="degree" name="degree" type="text" placeholder="e.g. Computer Science"
+                      className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="graduationYear" className="text-[13px] font-medium text-gray-500 ml-1">
+                      {eduStatus === "graduated" ? "Graduation Year" : "Expected Grad Year"}
+                    </label>
+                    <input
+                      id="graduationYear" name="graduationYear" type="text" placeholder="2024"
+                      className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all shadow-sm"
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* CERTIFICATES */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-slate-700">Certificates & courses</label>
-            <div className="space-y-3 mt-1">
-              {certificates.map((cid, index) => (
-                <div key={cid} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4 space-y-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-slate-500">Certificate {index + 1}</p>
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={handleAddCertificate}
-                        className="inline-flex items-center gap-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                        <Plus className="h-4 w-4" /> Add another
-                      </button>
-                      {certificates.length > 1 && (
-                        <button type="button" onClick={() => handleDeleteCertificate(cid)}
-                          className="text-xs font-medium text-red-500 hover:text-red-600">Delete</button>
-                      )}
-                    </div>
-                  </div>
+          {/* CERTIFICATES SECTION */}
+          <div className="space-y-6 pt-4 border-t border-gray-100 text-left">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-[14px] font-semibold text-gray-900 ml-1 block mb-1">Certifications</label>
+                <p className="text-sm text-gray-500 ml-1">Add any professional certifications you have.</p>
+              </div>
+              <button type="button" onClick={handleAddCert}
+                className="text-blue-600 hover:text-blue-700 font-semibold text-sm flex items-center gap-1.5 transition-colors">
+                <Plus className="w-4 h-4" strokeWidth={2.5} /> Add another
+              </button>
+            </div>
 
-                  <div>
-                    <label htmlFor={`certificateName-${index}`} className="block text-xs font-medium text-slate-700 mb-1">
-                      Certificate / course name
-                    </label>
+            <div className="space-y-4">
+              {certs.map((cid, index) => (
+                <div key={cid} className="rounded-3xl border border-gray-100 bg-white p-6 space-y-4 shadow-sm relative group animate-fade-in">
+                  {certs.length > 1 && (
+                    <button type="button" onClick={() => handleDeleteCert(cid)}
+                      className="absolute top-6 right-6 text-gray-400 hover:text-red-500">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                  <input
+                    id={`certName-${index}`} name={`certName-${index}`} type="text"
+                    placeholder="Certification Name (e.g. AWS Certified Developer)"
+                    className="w-full text-lg font-semibold bg-transparent placeholder:text-gray-200 focus:outline-none"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
                     <input
-                      id={`certificateName-${index}`} name={`certificateName-${index}`} type="text"
-                      placeholder="e.g. Deep Learning Specialization – Coursera"
-                      className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      id={`certOrg-${index}`} name={`certOrg-${index}`} type="text" placeholder="Organization"
+                      className="w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-blue-600/10 outline-none"
                     />
-                  </div>
-
-                  <div>
-                    <label htmlFor={`certificateSkills-${index}`} className="block text-xs font-medium text-slate-700 mb-1">
-                      Skills learnt from this course
-                    </label>
-                    <textarea
-                      id={`certificateSkills-${index}`} name={`certificateSkills-${index}`} rows={3}
-                      placeholder="e.g. CNNs, transfer learning, model deployment..."
-                      className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    <input
+                      id={`certYear-${index}`} name={`certYear-${index}`} type="text" placeholder="Year"
+                      className="w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-blue-600/10 outline-none"
                     />
                   </div>
                 </div>
@@ -202,59 +171,79 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
             </div>
           </div>
 
-          {/* PERSONAL IMAGE */}
-          <div className="space-y-2">
-            <label htmlFor="profileImage" className="block text-sm font-medium text-slate-700">Personal photo</label>
-            <div className="flex flex-col sm:flex-row items-start gap-4 mt-1">
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-                <Upload className="h-4 w-4" />
-                <span>Upload image</span>
-                <input id="profileImage" name="profileImage" type="file" accept="image/*" className="sr-only" onChange={handleProfileImageChange}/>
-              </label>
-              {profileImagePreview && (
-                <div className="h-16 w-16 rounded-full overflow-hidden border border-slate-200">
-                  <img src={profileImagePreview} alt="Profile preview" className="h-full w-full object-cover" />
+          {/* UPLOADS SECTION */}
+          <div className="space-y-8 pt-4 border-t border-gray-100 text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Profile Photo */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Camera className="w-4 h-4 text-gray-400" />
+                  <label className="text-[14px] font-semibold text-gray-900">Profile Photo</label>
                 </div>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-400">JPG/PNG, max 5 MB.</p>
-          </div>
+                <div className="relative group">
+                  <input
+                    type="file" accept="image/*" name="profileImage"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onChange={(e) => handleFileChange(e, "profile")}
+                  />
+                  <div className={`aspect-square rounded-[40px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 ${profilePreview ? "border-blue-600 bg-white" : "border-gray-200 group-hover:border-gray-300"
+                    }`}>
+                    {profilePreview ? (
+                      <img src={profilePreview} alt="Profile" className="w-full h-full object-cover animate-fade-in" />
+                    ) : (
+                      <>
+                        <UploadCloud className="w-10 h-10 text-gray-300 mb-2 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+                        <span className="text-sm font-medium text-gray-500">Upload photo</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-          {/* NATIONAL ID */}
-          <div className="space-y-2">
-            <label htmlFor="nationalIdImage" className="block text-sm font-medium text-slate-700">National ID (front)</label>
-            <div className="flex flex-col sm:flex-row items-start gap-4 mt-1">
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
-                <Upload className="h-4 w-4" />
-                <span>Upload ID image</span>
-                <input id="nationalIdImage" name="nationalIdImage" type="file" accept="image/*" className="sr-only" onChange={handleIdImageChange}/>
-              </label>
-              {idImagePreview && (
-                <div className="h-16 w-24 rounded-xl overflow-hidden border border-slate-200">
-                  <img src={idImagePreview} alt="National ID preview" className="h-full w-full object-cover" />
+              {/* National ID */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <ShieldCheck className="w-4 h-4 text-gray-400" />
+                  <label className="text-[14px] font-semibold text-gray-900">National ID Scan</label>
                 </div>
-              )}
+                <div className="relative group">
+                  <input
+                    type="file" accept="image/*" name="nationalIdImage"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onChange={(e) => handleFileChange(e, "id")}
+                  />
+                  <div className={`aspect-video rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 ${idPreview ? "border-blue-600 bg-white" : "border-gray-200 group-hover:border-gray-300"
+                    }`}>
+                    {idPreview ? (
+                      <img src={idPreview} alt="ID" className="w-full h-full object-cover animate-fade-in" />
+                    ) : (
+                      <>
+                        <UploadCloud className="w-10 h-10 text-gray-300 mb-2 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+                        <span className="text-sm font-medium text-gray-500">Upload ID</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-[11px] text-slate-400">Used for verification only; never shown publicly.</p>
           </div>
 
           {/* NAV BUTTONS */}
-          <div className="pt-2 flex items-center justify-between gap-3">
-            <button type="button" onClick={onBack} className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <div className="pt-8 flex items-center justify-between border-t border-gray-100">
+            <button type="button" onClick={onBack} className="text-lg font-medium text-gray-400 hover:text-black transition-colors">
               Back
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center justify-center rounded-xl 
-                bg-[#079c02] px-4 py-2.5 text-sm font-semibold text-white shadow-sm 
-                transition hover:bg-[#056b01] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full px-10 py-4 text-lg shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Finish signup
+              {submitting ? "Finishing..." : "Complete signup"}
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
             </button>
           </div>
         </form>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

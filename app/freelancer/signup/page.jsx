@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
+import SiteHeader from "@/components/SiteHeader";
 
 import FreelancerSignupStep1 from "@/components/FreelancerSignupStep1";
 import FreelancerSignupStep2 from "@/components/FreelancerSignupStep2";
@@ -9,28 +11,29 @@ import FreelancerSignupStep3 from "@/components/FreelancerSignupStep3";
 
 function SignupReviewScreen() {
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <section className="w-full max-w-4xl bg-white rounded-3xl shadow-lg border border-slate-200 px-6 py-6 md:px-10 md:py-8">
-        <div className="mb-10">
-          <Image
-            src="/chatgpt-instructions3.jpeg"
-            alt="Networkk"
-            width={128}
-            height={50}
-            className="h-8 w-auto"
-          />
-        </div>
-        <div className="space-y-3">
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-20">
+      <SiteHeader />
+      <main className="max-w-[1000px] mx-auto px-6 py-12 md:py-20 animate-fade-in">
+        <div className="max-w-[540px] mx-auto text-center">
+          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-[28px] flex items-center justify-center mx-auto mb-8">
+            <CheckCircle2 className="w-10 h-10" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-4xl font-semibold tracking-tight text-black mb-6">
             Account under review
           </h1>
-          <p className="text-sm text-slate-500 max-w-xl">
+          <p className="text-xl text-gray-500 font-medium leading-relaxed mb-10">
             We&apos;re reviewing your information to make sure everything looks good.
-            We will send you a confirmation mail shortly.
+            We will send you a confirmation email once your profile is verified.
           </p>
+          <button
+            onClick={() => window.location.href = "/"}
+            className="text-blue-600 hover:underline font-semibold text-lg"
+          >
+            Back to Home
+          </button>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
 
@@ -46,7 +49,6 @@ export default function FreelancerSignupFlowPage() {
   }, [step]);
 
   const handleNext = (chunk) => {
-    console.log("[wizard] step data:", chunk);
     setAcc((p) => ({ ...p, ...chunk }));
     setStep((s) => Math.min(s + 1, 4));
   };
@@ -57,8 +59,6 @@ export default function FreelancerSignupFlowPage() {
     setSubmitting(true);
     try {
       const payload = { ...acc, ...lastChunk };
-      console.log("[wizard] final payload keys:", Object.keys(payload));
-
       const { profileImage, nationalIdImage, ...rest } = payload;
       const form = new FormData();
       form.append("payload", JSON.stringify(rest));
@@ -67,7 +67,6 @@ export default function FreelancerSignupFlowPage() {
 
       const res = await fetch("/api/freelancers/signup", { method: "POST", body: form });
       const json = await res.json();
-      console.log("[wizard] server response:", json);
       if (!res.ok) throw new Error(json?.error?.message || "Signup failed");
 
       setStep(4);

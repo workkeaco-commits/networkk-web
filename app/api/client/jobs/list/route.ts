@@ -45,7 +45,7 @@ export async function GET() {
   // Find this client profile by auth_user_id
   const { data: cli, error: eCli } = await supabaseAdmin
     .from("clients")
-    .select("client_id, name, email")
+    .select("client_id, first_name, last_name, company_name, email")
     .eq("auth_user_id", auth.user.id)
     .maybeSingle();
 
@@ -54,7 +54,7 @@ export async function GET() {
   if (!client && auth.user.email) {
     const { data: byEmail } = await supabaseAdmin
       .from("clients")
-      .select("client_id, name, email")
+      .select("client_id, first_name, last_name, company_name, email")
       .eq("email", auth.user.email)
       .maybeSingle();
     client = byEmail || null;
@@ -76,7 +76,12 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    client: { client_id: client.client_id, name: client.name },
+    client: {
+      client_id: client.client_id,
+      first_name: client.first_name,
+      last_name: client.last_name,
+      company_name: client.company_name,
+    },
     jobs: jobs ?? [],
   });
 }

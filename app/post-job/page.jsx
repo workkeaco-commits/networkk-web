@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
-import JobPostPage from "@/components/JobPostPage";
+import AIJobPostAssistant from "@/components/AIJobPostAssistant";
 
 export default function PostJobRoute() {
   const router = useRouter();
@@ -11,17 +11,26 @@ export default function PostJobRoute() {
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         router.replace(`/client/sign-in?next=/post-job`);
         return;
       }
+
       if (mounted) setReady(true);
     })();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   if (!ready) return null;
-  return <JobPostPage />;
+
+  return <AIJobPostAssistant />;
 }

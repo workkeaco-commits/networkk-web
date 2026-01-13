@@ -1,572 +1,359 @@
 "use client";
 import {
-  Search,
   MessageSquare,
-  CheckCircle,
-  Star,
-  MapPin,
-  Briefcase,
+  Shield,
+  Zap,
+  FileText,
+  Search,
+  Users,
   ChevronLeft,
   ChevronRight,
-  Upload,
-  Zap,
-  Users,
-  Target,
-  Shield,
-  Rocket,
+  Sparkles,
+  ShieldCheck,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
-
 import Image from "next/image";
-
 import { useState, useEffect } from "react";
-
-const HERO_VIDEO_SRC = "/hero.mp4"; // file in /public/hero.mp4
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import DashboardMockup from "./DashboardMockup";
 
 export default function HomePage() {
+  const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const freelancers = [
     {
       name: "Amira Hassan",
-      image:
-        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop",
-      location: "Cairo, Egypt",
-      skills: ["UI/UX", "Web Design", "Prototyping"],
+      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&h=800&fit=crop",
+      location: "Cairo",
+      role: "Product Designer",
     },
     {
       name: "Omar Khalil",
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-      location: "Alexandria, Egypt",
-      skills: ["Full Stack", "React", "MongoDB"],
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop",
+      location: "Alexandria",
+      role: "Full Stack Engineer",
     },
     {
       name: "Layla Ahmed",
-      image:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop",
-      location: "Giza, Egypt",
-      skills: ["SEO", "Copywriting", "KnowledgeGraph"],
-    },
-    {
-      name: "Hassan Mahmoud",
-      image:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-      location: "Cairo, Egypt",
-      skills: ["Mobile Dev", "Flutter", "iOS"],
-    },
-    {
-      name: "Nour El-Din",
-      image:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-      location: "Giza, Egypt",
-      skills: ["Graphic Design", "Branding", "Illustration"],
+      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=800&h=800&fit=crop",
+      location: "Giza",
+      role: "SEO Specialist",
     },
   ];
 
-  // Auto-scroll carousel
+  /* Auto-scroll carousel */
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % freelancers.length);
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [freelancers.length]);
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % freelancers.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide(
-      (prev) => (prev - 1 + freelancers.length) % freelancers.length,
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-white font-[-apple-system,BlinkMacSystemFont,'SF_Pro','Segoe_UI',sans-serif]">
-      {/* Header */}
-      <header className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-1.5">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center">
-              <Image
-                src="/cropped_logo.jpg"
-                alt="Networkk"
-                width={160}   // base intrinsic ratio (approx 4:1)
-                height={40}
-                className="h-8 w-auto"  // actual rendered size, keeps aspect ratio
-              />
-            </div>
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased overflow-x-hidden">
+      {/* Sticky Blurred Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#fbfbfd]/80 backdrop-blur-xl border-b border-gray-200/50 transition-all duration-300">
+        <div className="max-w-[1200px] mx-auto px-6 h-[52px] flex items-center justify-between relative">
+          <Link href="/" className="flex items-center gap-2 group">
+            <Image
+              src="/logo-sf-display.png"
+              alt="Networkk"
+              width={220}
+              height={60}
+              className="h-12 w-auto object-contain"
+              priority
+            />
+          </Link>
 
-            {/* Centered nav */}
-            <nav className="hidden md:flex flex-1 justify-center gap-6 text-sm">
-              <a
-                href="#"
-                className="text-gray-700 hover:text-gray-900 py-1"
-              >
-                Browse Talent
-              </a>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-gray-900 py-1"
-              >
-                How It Works
-              </a>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-gray-900 py-1"
-              >
-                Our Story
-              </a>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-gray-900 py-1"
-              >
-                For Freelancers
-              </a>
-            </nav>
+          <nav className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-8 text-[12px] font-medium tracking-wide text-gray-800">
+            <Link href="/freelancer/signup" className="hover:text-[#10b8a6] transition-colors">Talent</Link>
+            <Link href="#how-it-works" className="hover:text-[#10b8a6] transition-colors">How it Works</Link>
+            <Link href="#" className="hover:text-[#10b8a6] transition-colors">Stories</Link>
+          </nav>
 
-            {/* CTA button – smaller & thinner */}
-{/* CTA button – smaller & thinner */}
-<Link
-  href="/client/signup"
-  className="border border-[#00BFA5] text-[#00BFA5] px-5 py-1.5 rounded-full text-sm font-medium bg-transparent hover:bg-white/10 inline-flex items-center justify-center"
->
-  Get Started
-</Link>
-
+          <div className="flex items-center gap-4">
+            <Link href="/client/signup" className="hidden md:inline-block text-[12px] bg-black text-white px-3 py-1.5 rounded-full hover:bg-gray-800 transition-colors">
+              Get Started
+            </Link>
           </div>
         </div>
       </header>
 
-
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Background video */}
-        <video
-          className="absolute inset-0 h-full w-full object-cover z-0"
-          src="/networkvideo.mp4"  // must be in /public/networkvideo.mp4
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          Your browser does not support the video tag.
-        </video>
-
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/40 z-10" />
-
-        {/* Text content on top */}
-        <div className="relative z-20 max-w-7xl mx-auto px-6 py-20 md:py-28">
-          <div className="text-center mb-8">
-            <p className="text-gray-200 mb-3 flex items-center justify-center gap-2 font-bold">
-              <span>🇪🇬</span> Egypt&apos;s Premier Marketplace for Freelance Jobs
-            </p>
-            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Hire skilled freelancers.
-              <br />
-              Bring your{" "}
-              <span
-                className="bg-clip-text text-transparent"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, #10b8a6 0%, #00D9CC 25%, #10b8a6 50%, #0fa0c1 75%, #00B8A6 100%)",
-                }}
-              >
-                vision
-              </span>{" "}
-              to life.
-            </h2>
-            <p className="text-lg md:text-xl text-gray-100 mb-8 max-w-2xl mx-auto">
-              Hire trusted experts in engineering, business, and design—anytime,
-              anywhere.
-            </p>
-
-            <div className="flex gap-4 justify-center items-center">
-              {/* White outlined button */}
-              <button
-                className="px-8 py-3 rounded-full font-medium border border-white text-white bg-transparent hover:bg-white/10 transition"
-              >
-                Hire Freelancers
-              </button>
-
-              {/* White text link to how-it-works section */}
-              <a
-                href="#how-it-works"
-                className="font-medium text-white hover:underline"
-              >
-                How it works
-              </a>
-            </div>
+      <section className="pt-32 pb-24 md:pt-48 md:pb-32 px-6">
+        <div className="max-w-[980px] mx-auto text-center animate-fade-in">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-semibold tracking-tightest leading-[1.05] mb-6 text-black">
+            Hire skilled<br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#10b8a6] to-[#34d399]">
+              freelancers.
+            </span>
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-500 font-medium leading-relaxed max-w-2xl mx-auto mb-10 delay-100 animate-fade-in opacity-0 fill-mode-forwards">
+            Bring your vision to life with Egypt’s trusted experts in engineering, business, and design.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 delay-200 animate-fade-in opacity-0 fill-mode-forwards">
+            <button className="bg-[#10b8a6] hover:bg-[#0e9f8e] text-white text-[17px] px-8 py-3 rounded-full transition-all transform hover:scale-105" onClick={() => router.push('/client/signup')}>
+              Hire Talent
+            </button>
+            <a href="#how-it-works" className="text-[#10b8a6] hover:underline text-[17px] flex items-center gap-1 group">
+              How it works <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" strokeWidth={1.5} />
+            </a>
           </div>
         </div>
-      </section>
 
+        {/* Premium Dashboard Mockup Visual */}
+        <div className="mt-20 max-w-6xl mx-auto md:h-[700px] delay-300 animate-fade-in opacity-0 fill-mode-forwards relative group">
+          <div className="absolute -inset-4 bg-gradient-to-tr from-[#10b8a6]/10 via-teal-500/5 to-emerald-500/10 rounded-[60px] blur-3xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            className="relative h-full"
+          >
+            <DashboardMockup />
+          </motion.div>
 
-      {/* Our Story Section - Apple Music Style */}
-      <section className="bg-gray-100 py-32">
-        <div className="max-w-7xl mx-auto px-6">
-          {/* First Block */}
-          <div className="grid md:grid-cols-2 gap-16 items-center mb-32">
-            <div>
-              <p className="text-sm font-semibold tracking-[0.2em] uppercase mb-4 bg-clip-text text-transparent bg-gradient-to-r from-[#00bfa5] via-[#00a5cf] to-[#0080ff]">
-                Our Story
-              </p>
-              <h2 className="text-6xl md:text-7xl font-bold leading-tight mb-0 bg-clip-text text-transparent bg-gradient-to-r from-[#00bfa5] via-[#00a5cf] to-[#0080ff]">
-                <span>It&apos;s not</span>
-                <br />
-                <span>just a job board.</span>
-                <br />
-                <span>It&apos;s way</span>
-                <br />
-                <span>better.</span>
-              </h2>
-            </div>
-
-            <div className="relative">
-              <div className="bg-gradient-to-br from-[#00bfa5] via-[#00a5cf] to-[#0080ff] rounded-3xl p-12 text-white shadow-2xl">
-                <div className="mb-8">
-                  <img
-                    src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop"
-                    alt="Team collaboration"
-                    className="w-full h-64 object-cover rounded-2xl"
-                  />
-                </div>
-                <p className="text-2xl font-semibold mb-3">
-                  How did we build something
-                  <br />
-                  this powerful for Egypt?
-                </p>
-                <p className="text-lg opacity-80 mb-2">By listening.</p>
-                <p className="text-xl font-bold">To freelancers like you.</p>
+          {/* Floating UI Accents */}
+          <div className="absolute -bottom-10 -right-10 hidden lg:block animate-fade-in delay-500 opacity-0 fill-mode-forwards">
+            <div className="bg-white/90 backdrop-blur-xl border border-gray-100 p-6 rounded-[32px] shadow-2xl shadow-black/10 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#10b8a6] flex items-center justify-center">
+                <MessageSquare className="text-white" size={20} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[14px] font-bold text-black leading-tight">Instant Chat</span>
+                <span className="text-[12px] text-gray-400 font-medium">Connect with experts in seconds</span>
               </div>
             </div>
           </div>
-
-      {/* Second Block - Reversed */}
-      <div className="grid md:grid-cols-2 gap-16 items-center mb-32">
-        <div className="relative md:order-1">
-          <div className="relative bg-white rounded-3xl p-8 shadow-2xl overflow-visible">
-            <div className="absolute -top-6 -left-6 w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-lg z-10">
-              <img
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop"
-                alt="Freelancer 1"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full border-4 border-white overflow-hidden shadow-lg z-10">
-              <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"
-                alt="Freelancer 2"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="absolute -bottom-8 left-1/4 w-32 h-32 rounded-full border-4 border-white overflow-hidden shadow-lg z-10">
-              <img
-                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop"
-                alt="Freelancer 3"
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            {/* Card with orange gradient */}
-            <div className="bg-gradient-to-br from-[#ea580c] via-[#f97316] to-[#fb923c] rounded-2xl p-8 pt-16 pb-20">
-              <h3 className="text-3xl font-bold text-white mb-2">
-                Egypt&apos;s Creative
-                <br />
-                Community
-              </h3>
-              <p className="text-white/80 text-lg">
-                Developers, designers, sales, and more—all in one place.
-              </p>
-            </div>
-          </div>
         </div>
+      </section>
 
-        <div className="md:order-2">
-          <p className="text-sm font-semibold tracking-[0.2em] uppercase mb-4 bg-clip-text text-transparent bg-gradient-to-r from-[#ea580c] via-[#f97316] to-[#fb923c]">
-            Built Different
-          </p>
-          <h2 className="text-5xl md:text-6xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-[#ea580c] via-[#f97316] to-[#fb923c]">
-            Get talented
-            <br />
-            people in
-            <br />
-            the mix.
-          </h2>
-        </div>
-      </div>
-
-
-          {/* Third Block */}
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+      {/* Story Section - Large Typography */}
+      <section className="py-24 md:py-32 bg-white">
+        <div className="max-w-[980px] mx-auto px-6">
+          <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-8">Our Story</p>
+          <div className="grid md:grid-cols-2 gap-16 md:gap-24 items-start">
             <div>
-              <p className="text-sm font-semibold tracking-[0.2em] uppercase mb-4 bg-clip-text text-transparent bg-gradient-to-r from-[#00bfa5] via-[#00a5cf] to-[#4f46e5]">
-                Our Mission
-              </p>
-              <h2 className="text-5xl md:text-6xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-[#00bfa5] via-[#00a5cf] to-[#4f46e5]">
-                <span>We&apos;re building</span>
-                <br />
-                <span>the future</span>
-                <br />
-                <span>of remote work.</span>
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-gray-900 leading-tight mb-6">
+                Not just a job board.
+                <br></br>
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#34d399] to-[#0ea5e9]">Ideally better.</span>
               </h2>
             </div>
-
-            <div className="bg-gradient-to-br from-[#00bfa5] via-[#00a5cf] to-[#4f46e5] rounded-3xl p-12 text-white shadow-2xl">
-              <p className="text-3xl font-bold leading-tight mb-6">
-                Every project deserves exceptional talent.
+            <div>
+              <p className="text-xl text-gray-600 leading-relaxed font-medium">
+                We built Networkk by listening to freelancers. We created a space where talented people are valued, payments are protected, and collaboration is seamless.
               </p>
-              <p className="text-xl opacity-90 mb-4">
-                Every freelancer deserves meaningful work.
-              </p>
-              <p className="text-2xl font-bold">We make both happen.</p>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Bento Grid - Features */}
+      <section className="py-24 md:py-32 bg-[#f5f5f7]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight text-center mb-16">The platform for pros.</h2>
 
-{/* How It Works Section – Apple-style, light + minimal */}
-<section
-  id="how-it-works"
-  className="bg-white py-24 md:py-32 border-t border-b border-slate-100"
->
-  <div className="max-w-5xl mx-auto px-6">
-    {/* Title */}
-    <div className="text-center mb-16">
-      <p className="text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-slate-400 mb-3">
-        How it works
-      </p>
-      <h3 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
-        Four simple steps to hire on Networkk.
-      </h3>
-    </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="md:col-span-2 bg-white p-10 md:p-14 rounded-[30px] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="relative z-10">
+                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Payments</p>
+                <h3 className="text-3xl font-bold mb-4">Milestone Protection.</h3>
+                <p className="text-gray-600 text-lg max-w-md">Funds are held safely in escrow until you approve the work. No surprises.</p>
+              </div>
+              <Shield className="absolute bottom-[-20px] right-[-20px] w-64 h-64 text-gray-100 group-hover:scale-105 transition-transform" strokeWidth={2} />
+            </div>
 
-    {/* ROW 1 – Steps 1–3 side by side */}
-    <div className="grid gap-16 md:grid-cols-3 mb-20">
-      {/* Step 1 */}
-      <div className="text-center">
-        <div className="mb-6 flex justify-center">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-300">
-            <Upload className="h-7 w-7 text-slate-700" />
-          </div>
-        </div>
-        <h4 className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">
-          Post your job.
-        </h4>
-        <p className="text-sm md:text-base leading-relaxed text-slate-500 max-w-xs mx-auto">
-          Describe the work, budget, and timeline. Your job is shared with
-          freelancers who match what you need.
-        </p>
-      </div>
+            {/* Card 2 */}
+            <div className="bg-white p-10 rounded-[30px] shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group">
+              <div>
+                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Speed</p>
+                <h3 className="text-3xl font-bold mb-4">Fast Hiring.</h3>
+              </div>
+              <div className="flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-teal-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Zap className="w-10 h-10 text-[#10b8a6]" strokeWidth={2.5} fill="currentColor" />
+                </div>
+              </div>
+            </div>
 
-      {/* Step 2 */}
-      <div className="text-center">
-        <div className="mb-6 flex justify-center">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-300">
-            <CheckCircle className="h-7 w-7 text-slate-700" />
-          </div>
-        </div>
-        <h4 className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">
-          Review proposals.
-        </h4>
-        <p className="text-sm md:text-base leading-relaxed text-slate-500 max-w-xs mx-auto">
-          Compare profiles, messages, and milestones. Choose the freelancer who
-          feels right for your project.
-        </p>
-      </div>
-
-      {/* Step 3 – Connect */}
-      <div className="text-center">
-        <div className="mb-6 flex justify-center">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-300">
-            <MessageSquare className="h-7 w-7 text-slate-700" />
-          </div>
-        </div>
-        <h4 className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">
-          Connect in chat.
-        </h4>
-        <p className="text-sm md:text-base leading-relaxed text-slate-500 max-w-xs mx-auto">
-          Ask questions, refine the scope, and align on milestones before you
-          commit to a proposal.
-        </p>
-      </div>
-    </div>
-
-{/* ROW 2 – Step 4 with sub-steps */}
-<div className="border-t border-slate-100 pt-12">
-  {/* Full-width black main block */}
-  <div className="mb-10 rounded-3xl bg-black px-6 py-10 md:px-12 md:py-12 text-center w-full">
-    <div className="mb-6 flex justify-center">
-      <div className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-500/60 bg-black">
-        <Shield className="h-7 w-7 text-slate-100" />
-      </div>
-    </div>
-    <h4 className="text-xl md:text-2xl font-semibold text-white mb-3">
-      Your payments, protected
-    </h4>
-    <p className="text-sm md:text-base leading-relaxed text-slate-300 max-w-xl mx-auto">
-      Keep everything in one place—from first message to final payment—
-      with milestones that protect both sides.
-    </p>
-  </div>
-
-  {/* Sub-steps beside each other */}
-  <div className="max-w-3xl mx-auto text-center">
-    <div className="grid gap-8 md:grid-cols-3">
-      <div>
-        <div className="mb-2 flex justify-center">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold text-slate-700">
-            1
-          </div>
-        </div>
-        <p className="text-sm font-semibold text-slate-900 mb-1">
-          Fund milestones.
-        </p>
-        <p className="text-xs md:text-sm text-slate-500">
-          Add funds to escrow so freelancers can start with confidence.
-        </p>
-      </div>
-
-      <div>
-        <div className="mb-2 flex justify-center">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold text-slate-700">
-            2
-          </div>
-        </div>
-        <p className="text-sm font-semibold text-slate-900 mb-1">
-          Approve work.
-        </p>
-        <p className="text-xs md:text-sm text-slate-500">
-          Review delivered milestones, request changes, and keep a clear record
-          of decisions.
-        </p>
-      </div>
-
-      <div>
-        <div className="mb-2 flex justify-center">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold text-slate-700">
-            3
-          </div>
-        </div>
-        <p className="text-sm font-semibold text-slate-900 mb-1">
-          Release payment.
-        </p>
-        <p className="text-xs md:text-sm text-slate-500">
-          Release each payment when you&apos;re satisfied—money only moves when
-          the work is completed.
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-  </div>
-</section>
-
-      {/* Featured Freelancers Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h3 className="text-4xl font-bold text-gray-900 mb-4">
-              Featured freelancers.
-            </h3>
-            <p className="text-gray-600">
-              Meet some of Egypt's top-rated professionals ready to bring your
-              projects to life.
-            </p>
-          </div>
-
-          <div className="relative">
-            <div className="overflow-hidden">
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{
-                  transform: `translateX(-${currentSlide * (100 / 3)}%)`,
-                }}
-              >
-                {freelancers.map((freelancer, index) => (
-                  <div key={index} className="min-w-[33.333%] px-4">
-                    <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
-                      <div className="relative">
-                        <img
-                          src={freelancer.image}
-                          alt={freelancer.name}
-                          className="w-full h-80 object-cover"
-                        />
-                      </div>
-                      <div className="p-6">
-                        <h4 className="text-xl font-bold text-gray-900 mb-2 text-center">
-                          {freelancer.name}
-                        </h4>
-                        <div className="flex items-center justify-center text-gray-600 text-sm mb-4">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          {freelancer.location}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-6 justify-center">
-                          {freelancer.skills.map((skill, i) => (
-                            <span
-                              key={i}
-                              className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex justify-center">
-                          <button className="bg-blue-600 text-white px-8 py-3 rounded-full font-medium hover:bg-blue-700 w-full max-w-xs">
-                            Hire Now
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            {/* Card 3 */}
+            <div className="bg-white p-10 rounded-[30px] shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between md:col-span-1 group">
+              <div>
+                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Community</p>
+                <h3 className="text-3xl font-bold mb-4">Top Talent.</h3>
+              </div>
+              <div className="mt-8 flex -space-x-4 justify-center">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-12 h-12 rounded-full border-2 border-white bg-gray-200"></div>
                 ))}
               </div>
             </div>
 
-            {/* Navigation Arrows */}
-            <button
-              onClick={prevSlide}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 z-10"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 z-10"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-700" />
-            </button>
+            {/* Card 4 */}
+            <div className="md:col-span-2 bg-white p-10 md:p-14 rounded-[30px] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="relative z-10">
+                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Workflow</p>
+                <h3 className="text-3xl font-bold mb-4">Seamless Chat.</h3>
+                <p className="text-gray-600 text-lg max-w-md">Connect, refine scope, and share files all in one unified workspace.</p>
+              </div>
+              <MessageSquare className="absolute bottom-8 right-8 w-32 h-32 text-teal-100 -rotate-12 group-hover:rotate-0 transition-transform" strokeWidth={2} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works - Reimagined as a Premium Flow */}
+      <section id="how-it-works" className="py-24 md:py-48 bg-white overflow-hidden">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[800px] mb-24 animate-fade-in">
+            <h2 className="text-4xl md:text-7xl font-semibold tracking-tightest leading-tight mb-8">
+              Hiring talent simplified.<br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#0ea5e9] to-[#10b8a6]">In three simple steps.</span>
+            </h2>
           </div>
 
-          {/* Pagination Dots */}
-          <div className="flex justify-center gap-2 mt-8">
-            {freelancers.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all ${
-                  index === currentSlide ? "bg-blue-600 w-8" : "bg-gray-300"
-                }`}
-              />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Step 1: The Brief */}
+            <div className="group relative p-10 rounded-[48px] bg-[#fbfbfd] border border-gray-100 hover:border-[#10b8a6]/20 transition-all duration-700 hover:shadow-2xl hover:shadow-[#10b8a6]/5">
+              <div className="absolute top-8 right-10 text-[80px] font-bold text-gray-50/50 group-hover:text-[#10b8a6]/5 transition-colors duration-700 pointer-events-none select-none">01</div>
+              <div className="mb-12 w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0ea5e9] to-[#0284c7] text-white flex items-center justify-center shadow-xl shadow-sky-500/20 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                <Sparkles className="w-8 h-8" strokeWidth={2} />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight">Post a Job.</h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-10">
+                Simply describe what you need. Our AI helps you draft the perfect brief that attracts top-tier talent.
+              </p>
+
+              {/* Visual Mini-Mockup */}
+              <div className="bg-white rounded-[32px] p-6 border border-gray-50 shadow-inner group-hover:translate-y-[-8px] transition-transform duration-700">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-[#10b8a6] animate-pulse"></div>
+                  <div className="h-2 w-24 bg-gray-100 rounded-full"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-2 w-full bg-gray-50 rounded-full"></div>
+                  <div className="h-2 w-10/12 bg-gray-50 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: The Hire */}
+            <div className="group relative p-10 rounded-[48px] bg-[#fbfbfd] border border-gray-100 hover:border-[#10b8a6]/20 transition-all duration-700 hover:shadow-2xl hover:shadow-[#10b8a6]/5">
+              <div className="absolute top-8 right-10 text-[80px] font-bold text-gray-50/50 group-hover:text-[#10b8a6]/5 transition-colors duration-700 pointer-events-none select-none">02</div>
+              <div className="mb-12 w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0ea5e9] to-[#10b8a6] text-white flex items-center justify-center shadow-xl shadow-blue-500/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                <Users className="w-8 h-8" strokeWidth={2} />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight">Hire Expertise.</h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-10">
+                Review proposals, check curated portfolios, and pick the expert that aligns with your vision.
+              </p>
+
+              {/* Visual Mini-Mockup */}
+              <div className="flex -space-x-3 justify-start mb-2 group-hover:translate-x-2 transition-transform duration-700">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-12 h-12 rounded-full border-4 border-white bg-gray-200 overflow-hidden">
+                    <div className="w-full h-full bg-gradient-to-tr from-gray-200 to-gray-100"></div>
+                  </div>
+                ))}
+                <div className="w-12 h-12 rounded-full border-4 border-white bg-[#10b8a6] flex items-center justify-center text-white">
+                  <Plus size={16} strokeWidth={3} />
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: The Work */}
+            <div className="group relative p-10 rounded-[48px] bg-[#fbfbfd] border border-gray-100 hover:border-[#10b8a6]/20 transition-all duration-700 hover:shadow-2xl hover:shadow-[#10b8a6]/5">
+              <div className="absolute top-8 right-10 text-[80px] font-bold text-gray-50/50 group-hover:text-[#10b8a6]/5 transition-colors duration-700 pointer-events-none select-none">03</div>
+              <div className="mb-12 w-16 h-16 rounded-2xl bg-gradient-to-br from-[#10b8a6] to-[#0d9488] text-white flex items-center justify-center shadow-xl shadow-teal-500/20 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
+                <ShieldCheck className="w-8 h-8" strokeWidth={2} />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 tracking-tight">Collaborate Safely.</h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-10">
+                Chat, share files, and pay securely. Funds are only released when you approve the milestones.
+              </p>
+
+              {/* Visual Mini-Mockup */}
+              <div className="bg-white rounded-2xl p-4 border border-gray-50 shadow-sm flex items-center gap-4 group-hover:scale-105 transition-transform duration-700">
+                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                  </div>
+                </div>
+                <div className="h-2 w-24 bg-gray-100 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Freelancer Showcase - Clean Carousel */}
+      <section className="py-24 bg-[#fbfbfd]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="flex justify-between items-end mb-12">
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">Meet the talent.</h2>
+            <div className="flex gap-2">
+              <button onClick={() => { }} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+              <button onClick={() => { }} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-6 overflow-x-auto no-scrollbar pb-8">
+            {freelancers.map((f, i) => (
+              <div key={i} className="min-w-[300px] md:min-w-[360px] bg-white rounded-[24px] shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                <div className="h-[280px] relative">
+                  <Image src={f.image} alt={f.name} fill className="object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  <div className="absolute bottom-6 left-6 text-white">
+                    <h3 className="text-xl font-semibold">{f.name}</h3>
+                    <p className="text-sm opacity-90">{f.location}</p>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{f.role}</p>
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <span className="bg-gray-100 text-[11px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Top Rated</span>
+                    <span className="bg-gray-100 text-[11px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Verified</span>
+                  </div>
+                  <button className="w-full py-2.5 rounded-full border border-gray-200 text-sm font-medium hover:border-black hover:bg-black hover:text-white transition-all">
+                    View Profile
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white py-12 border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">networkk</h1>
-          <p className="text-gray-600 text-sm">
-            © 2025 networkk. Empowering Egypt's creative economy.
-          </p>
+      {/* Footer - Minimal */}
+      <footer className="bg-white border-t border-gray-200 py-16 text-[12px] text-gray-500">
+        <div className="max-w-[980px] mx-auto px-6 text-center">
+          <p className="mb-4">Copyright © 2025 Networkk Inc. All rights reserved.</p>
+          <div className="flex justify-center gap-6">
+            <Link href="#" className="hover:underline">Privacy Policy</Link>
+            <Link href="#" className="hover:underline">Terms of Service</Link>
+            <Link href="#" className="hover:underline">Sales and Refunds</Link>
+            <Link href="#" className="hover:underline">Legal</Link>
+          </div>
         </div>
       </footer>
+
+      {/* Zap Icon Definition */}
+      <svg width="0" height="0" className="hidden">
+        <defs>
+          <symbol id="zap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </symbol>
+        </defs>
+      </svg>
     </div>
   );
 }

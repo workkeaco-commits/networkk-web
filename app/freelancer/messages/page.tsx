@@ -1,35 +1,36 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  FormEvent,
-  KeyboardEvent,
-  useRef,
-} from "react";
+import { useEffect, useState, FormEvent, KeyboardEvent, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
+import { Send, FileText, Loader2 } from "lucide-react";
+import FreelancerSidebar from "@/components/FreelancerSidebar";
+import ChatLayout, { ChatSidebar, ChatWindow } from "@/components/chat/ChatLayout";
+import ConversationList from "@/components/chat/ConversationList";
+import MessageBubble from "@/components/chat/MessageBubble";
+import ProposalBubble from "@/components/chat/ProposalBubble";
+import { motion, AnimatePresence } from "framer-motion";
 
-/* ----------------- helpers ----------------- */
-function sumMilestones(ms: Array<{ amount_gross?: number | null }>) {
-  return (ms || []).reduce(
-    (a, m) => a + (Number(m?.amount_gross ?? 0) || 0),
-    0
-  );
+/* ---------------- Helpers ---------------- */
+function initials(name?: string | null) {
+  if (!name) return "C";
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "C";
 }
 
-const toNum = (s: string) => {
-  const n = Number((s || "").replace(/,/g, ""));
-  return Number.isFinite(n) ? n : 0;
-};
+function displayClientName(
+  c?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    company_name?: string | null;
+    client_id?: number | null;
+  } | null
+) {
+  if (!c) return "Client";
+  const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
+  return fullName || `Client #${c.client_id || "?"}`;
+}
 
-const money = (n: number, maxFrac = 2) =>
-  (Math.round(n * 100) / 100).toLocaleString("en-US", {
-    maximumFractionDigits: maxFrac,
-  });
-
-/** Detect proposal marker from a chat message. Accepts:
- *  [[proposal]]:123   OR   "Proposal #123" in free text  */
 function parseProposalId(body: string): number | null {
   const m =
     body.match(/\[\[proposal\]\]\s*:\s*(\d+)/i) ||
@@ -38,13 +39,27 @@ function parseProposalId(body: string): number | null {
   return Number.isFinite(id) ? id : null;
 }
 
-/* ----------------- types ----------------- */
+const EPOCH_ISO = "1970-01-01T00:00:00Z";
+
+/* ---------------- Types ---------------- */
 type Conversation = {
   id: string;
   job_post_id: number;
+  client_id: number;
+  freelancer_id: number;
   created_at: string;
   last_message_at: string | null;
+  client_last_seen_at?: string | null;
+  freelancer_last_seen_at?: string | null;
   job_posts?: { title: string | null } | null;
+  client?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    company_name?: string | null;
+    client_id?: number | null;
+  } | null;
+  last_message_body?: string | null;
+  unread_count?: number;
 };
 
 type MessageRow = {
@@ -54,29 +69,337 @@ type MessageRow = {
   sender_role: "freelancer" | "client" | "admin";
   body: string;
   created_at: string;
+  is_read?: boolean | null;
 };
 
-type Freelancer = {
-  freelancer_id: number;
-  full_name: string | null;
-};
+type ContractLite = { contract_id: number; status: string; proposal_id?: number | null };
 
+/* ---------------- Offer Modal (Create) ---------------- */
+type Milestone = { title: string; amount: string; days: string };
+
+function OfferInlineModal({
+  open,
+  onClose,
+  clientId,
+  freelancerId,
+  jobPostId,
+  conversationId,
+  currentUserId,
+  platformFeePercent = 10,
+  locked,
+}: {
+  open: boolean;
+  onClose: () => void;
+  clientId: number | null;
+  freelancerId: number | null;
+  jobPostId: number | null;
+  conversationId: string | null;
+  currentUserId: string | null;
+  platformFeePercent?: number;
+  locked: boolean;
+}) {
+  const [totalPrice, setTotalPrice] = useState("");
+  const [currency, setCurrency] = useState("EGP");
+  const [milestones, setMilestones] = useState<Milestone[]>([{ title: "", amount: "", days: "" }]);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setTotalPrice("");
+      setCurrency("EGP");
+      setMilestones([{ title: "", amount: "", days: "" }]);
+      setSubmitting(false);
+      setServerError(null);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const toNum = (s: string) => {
+    const n = Number((s || "").replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const totalPriceNum = toNum(totalPrice);
+  const sumMilestones = milestones.reduce((acc, m) => acc + toNum(m.amount), 0);
+
+  const missing: string[] = [];
+  if (!clientId) missing.push("client");
+  if (!freelancerId) missing.push("freelancer");
+  if (!jobPostId) missing.push("job post");
+
+  const amountsValid =
+    milestones.length > 0 &&
+    milestones.every((m) => toNum(m.amount) > 0 && (m.title || "").trim().length > 0);
+
+  const durationValid = milestones.every((m) => Number.isFinite(Number(m.days)) && toNum(m.days) >= 0);
+
+  const sumMatchesTotal = totalPriceNum > 0 && Math.abs(sumMilestones - totalPriceNum) < 0.0001;
+
+  const canSubmit = !locked && !missing.length && amountsValid && durationValid && sumMatchesTotal && !submitting;
+
+  const addMilestone = () => setMilestones((m) => [...m, { title: "", amount: "", days: "" }]);
+  const removeMilestone = (idx: number) => setMilestones((m) => (m.length > 1 ? m.filter((_, i) => i !== idx) : m));
+  const updateMilestone = (idx: number, key: keyof Milestone, val: string) =>
+    setMilestones((m) => {
+      const c = [...m];
+      c[idx] = { ...c[idx], [key]: val };
+      return c;
+    });
+
+  const handleSubmit = async () => {
+    try {
+      if (!canSubmit) return;
+      setServerError(null);
+      setSubmitting(true);
+
+      const payload = {
+        job_post_id: jobPostId!,
+        client_id: clientId!,
+        freelancer_id: freelancerId!,
+        conversation_id: conversationId ?? null,
+        origin: "chat" as const,
+        offered_by: "freelancer" as const,
+        currency,
+        platform_fee_percent: platformFeePercent,
+        message: "Offer from freelancer via chat",
+        total_price: totalPriceNum,
+        milestones: milestones.map((m, i) => ({
+          order: i + 1,
+          title: (m.title || "").trim(),
+          amount: toNum(m.amount),
+          days: toNum(m.days),
+        })),
+      };
+
+      const res = await fetch("/api/proposals/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setServerError(json?.error || "Failed to send offer");
+        return;
+      }
+
+      if (conversationId && currentUserId) {
+        await supabase.from("messages").insert({
+          conversation_id: conversationId,
+          sender_auth_id: currentUserId,
+          sender_role: "freelancer",
+          body: `[[proposal]]:${json.proposal_id}`,
+        });
+        await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
+      }
+
+      onClose();
+    } catch (e: unknown) {
+      setServerError((e as Error)?.message || "Failed to send offer");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 min-h-screen">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-md transition-all"
+          />
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300, mass: 0.8 }}
+            className="relative z-10 w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden border border-white/60 flex flex-col max-h-[85vh] my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+              <h3 className="text-lg font-bold text-gray-900 tracking-tight">Create Offer</h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-black transition-colors"
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              {locked && (
+                <div className="mb-4 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-600 font-medium">
+                  Contract is active for this job. Proposals are locked.
+                </div>
+              )}
+              {!!missing.length && (
+                <div className="mb-4 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-600 font-medium">
+                  Missing: {missing.join(", ")} — cannot submit.
+                </div>
+              )}
+
+              <div className="space-y-5">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1 pt-2">
+                      Total Price
+                    </label>
+                    <input
+                      value={totalPrice}
+                      onChange={(e) => setTotalPrice(e.target.value.replace(/[^\d.]/g, ""))}
+                      className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm font-semibold text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all outline-none placeholder:text-gray-400"
+                      placeholder="e.g. 5000"
+                      disabled={locked}
+                    />
+                    {!sumMatchesTotal && totalPrice && (
+                      <p className="text-[11px] text-amber-500 pl-2 font-medium">Milestones sum must equal total.</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1 pt-2">Currency</label>
+                    <div className="relative">
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm font-bold text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all outline-none"
+                        disabled={locked}
+                      >
+                        <option value="EGP">EGP</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pl-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Milestones</label>
+                    <button
+                      type="button"
+                      onClick={addMilestone}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                      disabled={locked}
+                    >
+                      <span>+</span> Add Phase
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {milestones.map((m, i) => (
+                      <div
+                        key={i}
+                        className="rounded-[24px] border border-gray-100 bg-white p-4 shadow-sm hover:border-gray-200 transition-colors"
+                      >
+                        <div className="space-y-3">
+                          <input
+                            value={m.title}
+                            onChange={(e) => updateMilestone(i, "title", e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50/30 px-3 py-2.5 text-sm font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none placeholder:text-gray-400"
+                            placeholder={`Phase ${i + 1} Title`}
+                            disabled={locked}
+                          />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="relative">
+                              <input
+                                value={m.amount}
+                                onChange={(e) => updateMilestone(i, "amount", e.target.value.replace(/[^\d.]/g, ""))}
+                                className="w-full rounded-xl border border-gray-200 bg-gray-50/30 pl-3 pr-8 py-2.5 text-sm font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none placeholder:text-gray-400"
+                                placeholder="0.00"
+                                disabled={locked}
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
+                                $
+                              </div>
+                            </div>
+                            <div className="relative">
+                              <input
+                                value={m.days}
+                                onChange={(e) => updateMilestone(i, "days", e.target.value.replace(/[^\d]/g, ""))}
+                                className="w-full rounded-xl border border-gray-200 bg-gray-50/30 pl-3 pr-10 py-2.5 text-sm font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none placeholder:text-gray-400"
+                                placeholder="0"
+                                disabled={locked}
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
+                                Days
+                              </div>
+                            </div>
+                          </div>
+                          {milestones.length > 1 && (
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => removeMilestone(i)}
+                                className="text-[11px] font-bold text-red-400 hover:text-red-600 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+                                disabled={locked}
+                              >
+                                Remove Phase
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {serverError && (
+                  <div className="rounded-xl bg-red-50 border border-red-100 p-3 flex gap-2">
+                    <p className="text-xs text-red-600 font-medium">{serverError}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-b-[32px] shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className="px-8 py-2.5 rounded-[18px] bg-[#007AFF] text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] hover:shadow-blue-500/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:scale-100"
+              >
+                {submitting ? "Sending..." : "Send Offer"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ---------------- Offer Viewer (Freelancer) ---------------- */
 type ProposalLite = {
   proposal_id: number;
   offered_by: "client" | "freelancer";
-  status:
-    | "sent"
-    | "countered"
-    | "pending"
-    | "accepted"
-    | "rejected"
-    | "superseded"
-    | "cancelled";
+  status: "sent" | "countered" | "pending" | "accepted" | "rejected" | "superseded" | "withdrawn";
   currency: string | null;
   platform_fee_percent: number | null;
   message: string | null;
   created_at: string;
   conversation_id: string | null;
+  accepted_by_client: boolean;
+  accepted_by_freelancer: boolean;
   proposal_milestones: Array<{
     position: number;
     title: string | null;
@@ -85,35 +408,27 @@ type ProposalLite = {
   }>;
 };
 
-/* ----------------- Offer viewer modal (fetch by id; re-openable) ----------------- */
-function OfferViewerModal({
+function FreelancerOfferViewerModal({
   open,
   onClose,
   proposalId,
   conversationId,
   currentUserId,
+  locked,
+  onAfterAction,
+  clickPosition,
 }: {
   open: boolean;
   onClose: () => void;
   proposalId: number | null;
   conversationId: string | null;
   currentUserId: string | null;
+  locked: boolean;
+  onAfterAction: () => void;
+  clickPosition: { x: number; y: number } | null;
 }) {
+  const actorRole = "freelancer" as const;
   const [proposal, setProposal] = useState<ProposalLite | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [rows, setRows] = useState<
-    Array<{ title: string; amount: string; days: string }>
-  >([]);
-  const [totalPrice, setTotalPrice] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-
-  const currency = proposal?.currency || "EGP";
-  const platformFeePercent =
-    proposal?.platform_fee_percent != null
-      ? Math.max(0, Math.min(100, proposal.platform_fee_percent))
-      : 10;
-  const feeRate = platformFeePercent / 100;
 
   useEffect(() => {
     let cancelled = false;
@@ -121,11 +436,6 @@ function OfferViewerModal({
     const load = async () => {
       if (!open) {
         setProposal(null);
-        setRows([]);
-        setSubmitting(false);
-        setServerError(null);
-        setTotalPrice("");
-        setEditing(false);
         return;
       }
       if (!proposalId) {
@@ -138,6 +448,7 @@ function OfferViewerModal({
         .select(
           `
           proposal_id, offered_by, status, currency, platform_fee_percent, message, created_at, conversation_id,
+          accepted_by_client, accepted_by_freelancer,
           proposal_milestones:proposal_milestones ( position, title, amount_gross, duration_days )
         `
         )
@@ -145,30 +456,15 @@ function OfferViewerModal({
         .single();
 
       if (cancelled) return;
-
       if (error || !data) {
         setProposal(null);
         return;
       }
 
-      const p = data as unknown as ProposalLite;
-      setProposal(p);
-
-      const base = (p.proposal_milestones || [])
-        .slice()
-        .sort((a, b) => a.position - b.position)
-        .map((m) => ({
-          title: m.title || "",
-          amount: String(m.amount_gross ?? ""),
-          days: String(m.duration_days ?? ""),
-        }));
-      setRows(base.length ? base : [{ title: "", amount: "", days: "" }]);
-
-      const origTotal = sumMilestones(p.proposal_milestones || []);
-      setTotalPrice(origTotal ? String(origTotal) : "");
+      setProposal(data as unknown as ProposalLite);
     };
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -176,1125 +472,719 @@ function OfferViewerModal({
 
   if (!open) return null;
 
-  // totals (view mode)
-  const viewTotal = sumMilestones(proposal?.proposal_milestones || []);
+  const toInt = (s: string) => Number(s.replace(/[^\d]/g, "")) || 0;
+  const currency = proposal?.currency || "EGP";
+  const total = (proposal?.proposal_milestones || []).reduce((a, m) => a + (Number(m.amount_gross ?? 0) || 0), 0);
 
-  // totals (edit mode)
-  const totalPriceNum = toNum(totalPrice);
-  const editSumMilestones = rows.reduce((acc, r) => acc + toNum(r.amount), 0);
-  const editSumFee = rows.reduce(
-    (acc, r) => acc + toNum(r.amount) * feeRate,
-    0
-  );
-  const editSumNet = editSumMilestones - editSumFee;
+  const actorAccepted = !!proposal?.accepted_by_freelancer;
+  const otherAccepted = !!proposal?.accepted_by_client;
+  const isOfferor = proposal?.offered_by === actorRole;
 
-  // validations
-  const amountsValid =
-    rows.length > 0 &&
-    rows.every((r) => toNum(r.amount) > 0 && (r.title || "").trim().length > 0);
-  const durationValid = rows.every(
-    (r) => Number.isFinite(Number(r.days)) && toNum(r.days) >= 0
-  );
-  const sumMatchesTotal =
-    totalPriceNum > 0 && Math.abs(editSumMilestones - totalPriceNum) < 0.0001;
-  const canCounter =
-    editing && amountsValid && durationValid && sumMatchesTotal && !submitting;
+  const canAccept =
+    !!proposal && !locked && !isOfferor && ["sent", "countered", "pending"].includes(proposal.status) && !actorAccepted;
 
-  const addRow = () =>
-    setRows((r) => [...r, { title: "", amount: "", days: "" }]);
-  const removeRow = (i: number) =>
-    setRows((r) => (r.length > 1 ? r.filter((_, idx) => idx !== i) : r));
-  const updateRow = (i: number, k: "title" | "amount" | "days", v: string) =>
-    setRows((r) => {
-      const c = [...r];
-      c[i] = { ...c[i], [k]: k === "title" ? v : v.replace(/[^\d.]/g, "") };
-      return c;
-    });
+  const canConfirmContract =
+    !!proposal &&
+    !locked &&
+    isOfferor &&
+    otherAccepted &&
+    !actorAccepted &&
+    ["pending", "sent", "countered"].includes(proposal.status);
 
   const acceptOffer = async () => {
     if (!proposal) return;
-    try {
-      setSubmitting(true);
-      const res = await fetch(`/api/proposals/${proposal.proposal_id}/respond`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "accept", actor: "freelancer" }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to accept");
 
-      if (conversationId && currentUserId) {
-        await supabase.from("messages").insert({
-          conversation_id: conversationId,
-          sender_auth_id: currentUserId,
-          sender_role: "freelancer",
-          body: `Offer accepted (Proposal #${proposal.proposal_id}).`,
-        });
-        await supabase
-          .from("conversations")
-          .update({ last_message_at: new Date().toISOString() })
-          .eq("id", conversationId);
-      }
-
-      onClose();
-    } catch (e: any) {
-      setServerError(e?.message || "Failed to accept");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const sendCounter = async () => {
-    if (!proposal || !canCounter) return;
-
-    // two milestone shapes (cover both API variants)
-    const milestonesStd = rows
-      .map((r, i) => ({
-        order: i + 1,
-        title: r.title.trim(),
-        amount: toNum(r.amount),
-        days: toNum(r.days),
-      }))
-      .filter((m) => m.title && m.amount > 0);
-
-    const milestonesDb = rows
-      .map((r, i) => ({
-        position: i + 1,
-        title: r.title.trim(),
-        amount_gross: toNum(r.amount),
-        duration_days: toNum(r.days),
-      }))
-      .filter((m) => m.title && m.amount_gross > 0);
-
-    setSubmitting(true);
-    setServerError(null);
-
-    try {
-      const payload = {
-        actor: "freelancer",
-        offered_by: "freelancer",
-        origin: "chat",
-        conversation_id: conversationId,
-        currency,
-        platform_fee_percent: platformFeePercent,
-        message: "Counter offer from freelancer via chat",
-        total_price: totalPriceNum,
-        milestones: milestonesStd,
-        proposal_milestones: milestonesDb,
-      };
-
-      let res = await fetch(`/api/proposals/${proposal.proposal_id}/counter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      let json = await res.json();
-
-      if (!res.ok) {
-        const slim = {
-          actor: "freelancer",
-          offered_by: "freelancer",
-          origin: "chat",
-          conversation_id: conversationId,
-          currency,
-          platform_fee_percent: platformFeePercent,
-          message: "Counter offer from freelancer via chat",
-          milestones: milestonesStd,
-          proposal_milestones: milestonesDb,
-        };
-        const res2 = await fetch(
-          `/api/proposals/${proposal.proposal_id}/counter`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(slim),
-          }
-        );
-        json = await res2.json();
-        if (!res2.ok) throw new Error(json?.error || "Failed to send counter");
-      }
-
-      // ensure we reference the NEW proposal id in chat
-      let latestId = json?.proposal_id as number | undefined;
-      if (!latestId || latestId === proposal.proposal_id) {
-        const { data, error } = await supabase
-          .from("proposals")
-          .select(`proposal_id, status, created_at`)
-          .eq("conversation_id", conversationId)
-          .in("status", ["sent", "countered", "pending"])
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (!error && data && data[0]) latestId = data[0].proposal_id;
-      }
-
-      if (conversationId && currentUserId) {
-        await supabase.from("messages").insert({
-          conversation_id: conversationId,
-          sender_auth_id: currentUserId,
-          sender_role: "freelancer",
-          body: `[[proposal]]:${latestId ?? proposal.proposal_id}`,
-        });
-        await supabase
-          .from("conversations")
-          .update({ last_message_at: new Date().toISOString() })
-          .eq("id", conversationId);
-      }
-
-      onClose();
-    } catch (e: any) {
-      setServerError(e?.message || "Failed to send counter");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const headerLabel =
-    proposal?.offered_by === "client"
-      ? "Offer from client"
-      : proposal?.offered_by === "freelancer"
-      ? "Your sent offer"
-      : "Offer";
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onMouseDown={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">
-            {editing ? "Edit & send counter" : headerLabel}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xl leading-none text-slate-400 hover:text-slate-600"
-          >
-            ×
-          </button>
-        </div>
-
-        {!proposal ? (
-          <p className="text-sm text-slate-600">Offer not found.</p>
-        ) : !editing ? (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 p-3 bg-slate-50">
-              <p className="text-sm text-slate-800">
-                {proposal.message || "Offer"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Currency: {currency} • Platform fee: {platformFeePercent}%
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Status: {proposal.status}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-slate-900">Milestones</h4>
-              <div className="space-y-2">
-                {proposal.proposal_milestones
-                  .slice()
-                  .sort((a, b) => a.position - b.position)
-                  .map((m) => (
-                    <div
-                      key={m.position}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                    >
-                      <div className="text-slate-800">
-                        {m.title || `Milestone #${m.position}`}
-                        <span className="ml-2 text-xs text-slate-500">
-                          {m.duration_days ? `• ${m.duration_days} days` : ""}
-                        </span>
-                      </div>
-                      <div className="text-slate-900 font-medium">
-                        {currency} {(m.amount_gross ?? 0).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              <div className="mt-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px]">
-                <div className="flex justify-between">
-                  <span>Milestones total</span>
-                  <span>
-                    {currency} {money(viewTotal)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Platform fee {platformFeePercent}%</span>
-                  <span>
-                    − {currency} {money(viewTotal * feeRate)}
-                  </span>
-                </div>
-                <div className="mt-1 border-t border-slate-200 pt-1 flex justify-between font-medium text-slate-900">
-                  <span>Freelancer receives</span>
-                  <span>
-                    {currency} {money(viewTotal * (1 - feeRate))}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* --- editing view --- */
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-2">
-                <label className="block text-xs text-slate-500 mb-1">
-                  Total price (project)
-                </label>
-                <input
-                  value={totalPrice}
-                  onChange={(e) =>
-                    setTotalPrice(e.target.value.replace(/[^\d.]/g, ""))
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                  placeholder="5000"
-                />
-                {!sumMatchesTotal && totalPrice && (
-                  <p className="mt-1 text-[11px] text-amber-600">
-                    Milestones sum ({money(editSumMilestones)} {currency}) must
-                    equal total ({money(totalPriceNum)} {currency}).
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">
-                  Currency
-                </label>
-                <input
-                  value={currency}
-                  readOnly
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="text-sm font-medium text-slate-900">
-                  Milestones
-                </label>
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
-                >
-                  + Add milestone
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {rows.map((r, i) => {
-                  const amt = toNum(r.amount);
-                  const fee = amt * feeRate;
-                  const net = amt - fee;
-
-                  return (
-                    <div
-                      key={i}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                    >
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        <input
-                          value={r.title}
-                          onChange={(e) => updateRow(i, "title", e.target.value)}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                          placeholder={`Milestone #${i + 1} title`}
-                        />
-                        <input
-                          value={r.amount}
-                          onChange={(e) => updateRow(i, "amount", e.target.value)}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                          placeholder="Amount"
-                        />
-                        <input
-                          value={r.days}
-                          onChange={(e) => updateRow(i, "days", e.target.value)}
-                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                          placeholder="Days"
-                        />
-                      </div>
-
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>
-                          Platform fee {platformFeePercent}%: {currency}{" "}
-                          {money(fee)}
-                        </span>
-                        <span>
-                          Freelancer receives:{" "}
-                          <strong className="text-slate-700">
-                            {currency} {money(net)}
-                          </strong>
-                        </span>
-                      </div>
-
-                      {rows.length > 1 && (
-                        <div className="mt-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeRow(i)}
-                            className="text-xs text-slate-400 hover:text-red-500"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px]">
-                <div className="flex justify-between">
-                  <span>Milestones total</span>
-                  <span>
-                    {currency} {money(editSumMilestones)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Platform fee {platformFeePercent}%</span>
-                  <span>
-                    − {currency} {money(editSumFee)}
-                  </span>
-                </div>
-                <div className="mt-1 border-t border-slate-200 pt-1 flex justify-between font-medium text-slate-900">
-                  <span>Freelancer receives</span>
-                  <span>
-                    {currency} {money(editSumNet)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {serverError && (
-              <p className="text-xs text-red-600">{serverError}</p>
-            )}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-2 pt-3">
-          {!proposal ? null : !editing ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs"
-              >
-                Edit & Counter
-              </button>
-              {proposal?.offered_by === "client" && (
-                <button
-                  type="button"
-                  onClick={acceptOffer}
-                  className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-60"
-                  disabled={submitting}
-                >
-                  {submitting ? "Processing…" : "Accept offer"}
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="rounded-full border border-slate-300 px-3 py-1.5 text-xs"
-                disabled={submitting}
-              >
-                Cancel edit
-              </button>
-              <button
-                type="button"
-                onClick={sendCounter}
-                className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-60"
-                disabled={!canCounter}
-                title={
-                  !sumMatchesTotal
-                    ? "Milestones total must equal project total"
-                    : !amountsValid
-                    ? "Add titles and positive amounts"
-                    : !durationValid
-                    ? "Days must be numbers ≥ 0"
-                    : undefined
-                }
-              >
-                {submitting ? "Sending…" : "Send counter"}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ----------------- Page ----------------- */
-export default function FreelancerMessagesPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [authChecking, setAuthChecking] = useState(true);
-  const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loadingConversations, setLoadingConversations] = useState(true);
-  const [selectedConversation, setSelectedConversation] =
-    useState<Conversation | null>(null);
-
-  const [messages, setMessages] = useState<MessageRow[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-
-  const [newConversationIds, setNewConversationIds] = useState<
-    Record<string, boolean>
-  >({});
-
-  // latest open proposal (for header button + fallback bubble)
-  const [activeProposal, setActiveProposal] = useState<ProposalLite | null>(
-    null
-  );
-
-  // viewer state (re-openable)
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerProposalId, setViewerProposalId] = useState<number | null>(null);
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  // Auth
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (cancelled) return;
-
-      if (!user) {
-        router.replace("/freelancer/sign-in?next=/freelancer/messages");
-        return;
-      }
-
-      setCurrentUserId(user.id);
-
-      const { data, error } = await supabase
-        .from("freelancers")
-        .select("freelancer_id, full_name")
-        .eq("auth_user_id", user.id)
-        .single();
-
-      if (cancelled) return;
-
-      if (error || !data) {
-        router.replace("/freelancer/sign-in?next=/freelancer/messages");
-        return;
-      }
-
-      setFreelancer(data as unknown as Freelancer);
-      setAuthChecking(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  // Load conversations
-  useEffect(() => {
-    if (authChecking || !freelancer) return;
-
-    let cancelled = false;
-
-    (async () => {
-      setLoadingConversations(true);
-
-      const { data, error } = await supabase
-        .from("conversations")
-        .select(
-          `
-          id,
-          job_post_id,
-          created_at,
-          last_message_at,
-          job_posts:job_post_id ( title )
-        `
-        )
-        .eq("freelancer_id", freelancer.freelancer_id)
-        .order("last_message_at", { ascending: false, nullsFirst: false });
-
-      if (cancelled) return;
-
-      if (error) {
-        setConversations([]);
-        setLoadingConversations(false);
-        return;
-      }
-
-      const convs = (data || []) as unknown as Conversation[];
-      setConversations(convs);
-      setLoadingConversations(false);
-
-      const qsId = searchParams.get("conversation");
-      setSelectedConversation(
-        (qsId && convs.find((c) => c.id === qsId)) || convs[0] || null
-      );
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authChecking, freelancer, searchParams]);
-
-  // Realtime: conversation insert/delete
-  useEffect(() => {
-    if (!freelancer) return;
-
-    const channel = supabase
-      .channel(`freelancer-conversations-${freelancer.freelancer_id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "conversations",
-          filter: `freelancer_id=eq.${freelancer.freelancer_id}`,
-        },
-        async (payload) => {
-          const newId = (payload.new as any).id as string;
-
-          const { data, error } = await supabase
-            .from("conversations")
-            .select(
-              `
-              id,
-              job_post_id,
-              created_at,
-              last_message_at,
-              job_posts:job_post_id ( title )
-            `
-            )
-            .eq("id", newId)
-            .single();
-
-          if (error || !data) return;
-
-          const conv = data as unknown as Conversation;
-
-          setConversations((prev) =>
-            prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev]
-          );
-          setNewConversationIds((prev) => ({ ...prev, [conv.id]: true }));
-          setSelectedConversation((current) => current ?? conv);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "conversations",
-          filter: `freelancer_id=eq.${freelancer.freelancer_id}`,
-        },
-        (payload) => {
-          const deletedId = (payload.old as any).id as string;
-          setConversations((prev) => prev.filter((c) => c.id !== deletedId));
-          setNewConversationIds((prev) => {
-            const copy = { ...prev };
-            delete copy[deletedId];
-            return copy;
-          });
-          setMessages((prev) =>
-            selectedConversation && selectedConversation.id === deletedId
-              ? []
-              : prev
-          );
-          setSelectedConversation((current) =>
-            !current || current.id !== deletedId ? current : null
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [freelancer, selectedConversation]);
-
-  // Load messages + latest open proposal + realtime
-  useEffect(() => {
-    if (!selectedConversation) {
-      setMessages([]);
-      setActiveProposal(null);
+    const res = await fetch(`/api/proposals/${proposal.proposal_id}/respond`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "accept", actor: "freelancer" }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json?.error || "Failed to accept");
       return;
     }
 
-    let cancelled = false;
-
-    const loadMessages = async () => {
-      setLoadingMessages(true);
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", selectedConversation.id)
-        .order("created_at", { ascending: true });
-
-      if (!cancelled) {
-        if (error) {
-          setMessages([]);
-        } else {
-          const msgs = (data || []) as unknown as MessageRow[];
-          setMessages(msgs);
-        }
-        setLoadingMessages(false);
-        setNewConversationIds((prev) => {
-          const copy = { ...prev };
-          delete copy[selectedConversation.id];
-          return copy;
-        });
-      }
-    };
-
-    const loadProposal = async () => {
-      const { data, error } = await supabase
-        .from("proposals")
-        .select(
-          `
-            proposal_id,
-            offered_by,
-            status,
-            currency,
-            platform_fee_percent,
-            message,
-            created_at,
-            conversation_id,
-            proposal_milestones:proposal_milestones ( position, title, amount_gross, duration_days )
-          `
-        )
-        .eq("conversation_id", selectedConversation.id)
-        .in("status", ["sent", "countered", "pending"])
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (!cancelled) {
-        if (error || !data || !data[0]) {
-          setActiveProposal(null);
-        } else {
-          const proposals = data as unknown as ProposalLite[];
-          setActiveProposal(proposals[0] ?? null);
-        }
-      }
-    };
-
-    loadMessages();
-    loadProposal();
-
-    const msgChan = supabase
-      .channel(`conversation-${selectedConversation.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${selectedConversation.id}`,
-        },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as MessageRow]);
-        }
-      )
-      .subscribe();
-
-    const propChan = supabase
-      .channel(`proposals-${selectedConversation.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "proposals",
-          filter: `conversation_id=eq.${selectedConversation.id}`,
-        },
-        async () => {
-          const { data } = await supabase
-            .from("proposals")
-            .select(
-              `
-                proposal_id,
-                offered_by,
-                status,
-                currency,
-                platform_fee_percent,
-                message,
-                created_at,
-                conversation_id,
-                proposal_milestones:proposal_milestones ( position, title, amount_gross, duration_days )
-              `
-            )
-            .eq("conversation_id", selectedConversation.id)
-            .in("status", ["sent", "countered", "pending"])
-            .order("created_at", { ascending: false })
-            .limit(1);
-
-          if (data && data[0]) {
-            const proposals = data as unknown as ProposalLite[];
-            setActiveProposal(proposals[0] ?? null);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(msgChan);
-      supabase.removeChannel(propChan);
-    };
-  }, [selectedConversation]);
-
-  // Auto-scroll
-  useEffect(() => {
-    if (!selectedConversation) return;
-    if (!messagesEndRef.current) return;
-    messagesEndRef.current.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, [selectedConversation, messages.length]);
-
-  // Mark seen
-  useEffect(() => {
-    if (!freelancer || !selectedConversation || messages.length === 0) return;
-    (async () => {
-      try {
-        const { error } = await supabase.rpc(
-          "mark_messages_seen_as_freelancer"
-        );
-        if (error) {
-          console.error("mark_messages_seen_as_freelancer error", error);
-        }
-      } catch (err) {
-        console.error("mark_messages_seen_as_freelancer threw", err);
-      }
-    })();
-  }, [freelancer, selectedConversation, messages.length]);
-
-  // Send message
-  const handleSend = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || !currentUserId) return;
-
-    const body = newMessage.trim();
-    setNewMessage("");
-
-    const { error } = await supabase.from("messages").insert({
-      conversation_id: selectedConversation.id,
-      sender_auth_id: currentUserId,
-      sender_role: "freelancer",
-      body,
-    });
-
-    if (error) {
-      setNewMessage(body);
-    } else {
-      await supabase
-        .from("conversations")
-        .update({ last_message_at: new Date().toISOString() })
-        .eq("id", selectedConversation.id);
+    if (conversationId && currentUserId) {
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        sender_auth_id: currentUserId,
+        sender_role: "freelancer",
+        body: `Freelancer accepted the offer (Proposal #${proposal.proposal_id}). Waiting for client confirmation.`,
+      });
+      await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
     }
+
+    onAfterAction();
+    onClose();
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(e as unknown as FormEvent);
+  const confirmContract = async () => {
+    if (!proposal) return;
+
+    const res = await fetch(`/api/proposals/${proposal.proposal_id}/respond`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "confirm", actor: "freelancer" }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json?.error || "Failed to confirm");
+      return;
     }
+
+    if (conversationId && currentUserId) {
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        sender_auth_id: currentUserId,
+        sender_role: "freelancer",
+        body: `Freelancer confirmed the contract (Proposal #${proposal.proposal_id}).`,
+      });
+      await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
+    }
+
+    onAfterAction();
+    onClose();
   };
 
-  const showHeaderViewButton =
-    !!activeProposal &&
-    activeProposal.offered_by === "client" &&
-    ["sent", "countered", "pending"].includes(activeProposal.status);
+  const safeW = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const safeH = typeof window !== "undefined" ? window.innerHeight : 800;
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        <header className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Messages</h1>
-            <p className="text-sm text-slate-500">
-              Chat with clients about your job posts.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push("/jobs")}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Back to jobs
-          </button>
-        </header>
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/20 backdrop-blur-md"
+          />
 
-        <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
-          {/* Left: conversation list */}
-          <aside className="rounded-2xl border border-slate-200 bg-white p-3 flex flex-col">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-800">
-                Conversations
-              </h2>
-              <span className="text-[11px] text-slate-400">
-                {loadingConversations
-                  ? "Loading…"
-                  : `${conversations.length} chats`}
-              </span>
+          <motion.div
+            initial={
+              clickPosition
+                ? {
+                    opacity: 0,
+                    scale: 0.1,
+                    x: clickPosition.x - safeW / 2,
+                    y: clickPosition.y - safeH / 2,
+                  }
+                : { opacity: 0, scale: 0.3, y: 100 }
+            }
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            exit={
+              clickPosition
+                ? {
+                    opacity: 0,
+                    scale: 0.1,
+                    x: clickPosition.x - safeW / 2,
+                    y: clickPosition.y - safeH / 2,
+                  }
+                : { opacity: 0, scale: 0.3, y: 100 }
+            }
+            transition={{ type: "spring", damping: 20, stiffness: 300, mass: 0.5 }}
+            className="relative z-10 w-full max-w-[420px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-gray-100 shrink-0">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Proposal</h3>
+                <p className="text-xs text-gray-500 mt-0.5">#{proposal?.proposal_id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
             </div>
 
-            {conversations.length === 0 && !loadingConversations ? (
-              <p className="mt-4 text-xs text-slate-500">
-                You don&apos;t have any conversations yet.
-              </p>
-            ) : (
-              <ul className="flex-1 space-y-1 overflow-y-auto">
-                {conversations.map((c) => {
-                  const isActive = selectedConversation?.id === c.id;
-                  const title = c.job_posts?.title || `Job #${c.job_post_id}`;
-                  const lastTime = c.last_message_at || c.created_at;
-                  const isNew = newConversationIds[c.id];
+            <div className="px-6 py-6 overflow-y-auto flex-1">
+              {!proposal ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                  <p className="text-sm text-gray-500">Loading proposal...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        proposal.status === "accepted"
+                          ? "bg-green-500"
+                          : proposal.status === "rejected"
+                          ? "bg-red-500"
+                          : "bg-blue-500"
+                      }`}
+                    />
+                    <span className="text-sm font-medium text-gray-700 capitalize">{proposal.status}</span>
+                    {locked && (
+                      <>
+                        <span className="text-gray-300">•</span>
+                        <span className="text-xs text-orange-600 font-medium">Contract Active</span>
+                      </>
+                    )}
+                  </div>
 
-                  return (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedConversation(c)}
-                        className={`w-full rounded-xl px-3 py-2 text-left text-xs ${
-                          isActive
-                            ? "bg-emerald-50 border border-emerald-200"
-                            : "hover:bg-slate-50 border border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-medium text-slate-900 line-clamp-2">
-                            {title}
-                          </div>
-                          {isNew && (
-                            <span className="ml-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-                              NEW
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-slate-400">
-                          {new Date(lastTime).toLocaleString()}
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </aside>
-
-          {/* Right: messages */}
-          <section className="rounded-2xl border border-slate-200 bg-white flex flex-col h-[520px]">
-            {selectedConversation ? (
-              <>
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {selectedConversation.job_posts?.title ||
-                        `Job #${selectedConversation.job_post_id}`}
+                  <div className="bg-gray-50 rounded-2xl p-5">
+                    <p className="text-xs text-gray-500 mb-1">Total Amount</p>
+                    <p className="text-3xl font-semibold text-gray-900 tracking-tight">
+                      {currency} {total.toLocaleString()}
                     </p>
-                    <p className="text-[11px] text-slate-500">
-                      Chat with the client
+                    <p className="text-xs text-gray-500 mt-2">
+                      {proposal.proposal_milestones.length} milestone{proposal.proposal_milestones.length !== 1 ? "s" : ""}
                     </p>
                   </div>
 
-                  {showHeaderViewButton ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activeProposal) {
-                          setViewerProposalId(activeProposal.proposal_id);
-                          setViewerOpen(true);
-                        }
-                      }}
-                      className="inline-flex items-center rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-600"
-                      title="View current offer"
-                    >
-                      View offer
-                    </button>
-                  ) : (
-                    <span className="text-xs text-slate-400"></span>
-                  )}
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-                  {loadingMessages ? (
-                    <p className="text-xs text-slate-500">
-                      Loading messages…
-                    </p>
-                  ) : messages.length === 0 ? (
-                    <p className="text-xs text-slate-500">
-                      No messages yet. Say hi to the client 👋
-                    </p>
-                  ) : (
-                    messages.map((m) => {
-                      const isOwn = m.sender_auth_id === currentUserId;
-                      const pid = parseProposalId(m.body);
-                      const bubbleBase =
-                        "max-w-[75%] rounded-2xl px-3 py-2 text-sm";
-
-                      if (pid) {
-                        // clickable proposal row
-                        return (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Milestones</h4>
+                    <div className="space-y-2">
+                      {proposal.proposal_milestones
+                        .slice()
+                        .sort((a, b) => a.position - b.position)
+                        .map((m, i) => (
                           <div
-                            key={m.id}
-                            className={`flex ${
-                              isOwn ? "justify-end" : "justify-start"
-                            }`}
+                            key={i}
+                            className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200 hover:border-gray-300 transition-colors"
                           >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setViewerProposalId(pid);
-                                setViewerOpen(true);
-                              }}
-                              className={`${
-                                isOwn
-                                  ? "bg-emerald-500 text-white"
-                                  : "bg-white text-emerald-700 border border-emerald-200"
-                              } ${bubbleBase} shadow-sm hover:shadow`}
-                              title="Open offer"
-                            >
-                              <span className="font-medium">
-                                Offer • Proposal #{pid}
-                              </span>
-                              <span className="block text-[10px] opacity-80">
-                                {new Date(m.created_at).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
-                              </span>
-                            </button>
+                            <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
+                              {m.position}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{m.title || "Milestone"}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{m.duration_days} days</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {toInt(String(m.amount_gross || 0)).toLocaleString()}
+                              </p>
+                              <p className="text-[10px] text-gray-500">{currency}</p>
+                            </div>
                           </div>
-                        );
-                      }
+                        ))}
+                    </div>
+                  </div>
 
-                      // normal text message
-                      return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className={`p-4 rounded-xl border ${
+                        proposal.accepted_by_client ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+                      }`}
+                    >
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Client</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${proposal.accepted_by_client ? "bg-green-500" : "bg-gray-300"}`} />
+                        <span className={`text-xs font-semibold ${proposal.accepted_by_client ? "text-green-700" : "text-gray-500"}`}>
+                          {proposal.accepted_by_client ? "Approved" : "Pending"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`p-4 rounded-xl border ${
+                        proposal.accepted_by_freelancer ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+                      }`}
+                    >
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Freelancer</p>
+                      <div className="flex items-center gap-1.5">
                         <div
-                          key={m.id}
-                          className={`flex ${
-                            isOwn ? "justify-end" : "justify-start"
+                          className={`w-1.5 h-1.5 rounded-full ${proposal.accepted_by_freelancer ? "bg-green-500" : "bg-gray-300"}`}
+                        />
+                        <span
+                          className={`text-xs font-semibold ${
+                            proposal.accepted_by_freelancer ? "text-green-700" : "text-gray-500"
                           }`}
                         >
-                          <div
-                            className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
-                              isOwn
-                                ? "bg-emerald-500 text-white"
-                                : "bg-slate-100 text-slate-900"
-                            }`}
-                          >
-                            <p className="whitespace-pre-wrap">{m.body}</p>
-                            <span className="mt-1 block text-[10px] text-slate-400 text-right">
-                              {new Date(m.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-
-                  {/* Fallback synthetic bubble if there is an active offer but no marker yet */}
-                  {!loadingMessages &&
-                    messages.length > 0 &&
-                    activeProposal &&
-                    ["sent", "countered", "pending"].includes(
-                      activeProposal.status
-                    ) &&
-                    !messages.some((m) => parseProposalId(m.body)) && (
-                      <div className="flex justify-start">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setViewerProposalId(activeProposal.proposal_id);
-                            setViewerOpen(true);
-                          }}
-                          className="max-w-[75%] cursor-pointer rounded-2xl bg-amber-50 border border-amber-200 px-3 py-2 text-left text-sm text-amber-900 hover:bg-amber-100"
-                          title="Open offer"
-                        >
-                          <p className="font-medium">
-                            💼 Offer from client — click to open
-                          </p>
-                          {activeProposal.message && (
-                            <p className="mt-0.5 text-[12px] text-amber-800">
-                              {activeProposal.message}
-                            </p>
-                          )}
-                          <div className="mt-1 text-[12px] text-amber-800">
-                            Total:{" "}
-                            <strong>
-                              {(activeProposal.currency || "EGP")}{" "}
-                              {sumMilestones(
-                                activeProposal.proposal_milestones || []
-                              ).toLocaleString()}
-                            </strong>
-                          </div>
-                        </button>
+                          {proposal.accepted_by_freelancer ? "Approved" : "Pending"}
+                        </span>
                       </div>
-                    )}
-
-                  <div ref={messagesEndRef} />
+                    </div>
+                  </div>
                 </div>
+              )}
+            </div>
 
-                <form
-                  onSubmit={handleSend}
-                  className="border-t border-slate-200 px-4 py-3 flex items-end gap-2"
-                >
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    rows={1}
-                    placeholder="Type your message…"
-                    className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
+            {proposal && (canAccept || canConfirmContract) && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2 shrink-0">
+                {canAccept && (
                   <button
-                    type="submit"
-                    className="inline-flex items-center rounded-full bg-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-60"
-                    disabled={!newMessage.trim()}
+                    onClick={acceptOffer}
+                    className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all"
                   >
-                    Send
+                    Accept Proposal
                   </button>
-                </form>
-              </>
-            ) : (
-              <div className="flex flex-1 items-center justify-center text-sm text-slate-500">
-                Select a conversation from the left to start chatting.
+                )}
+                {canConfirmContract && (
+                  <button
+                    onClick={confirmContract}
+                    className="w-full py-3 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 active:scale-[0.98] transition-all"
+                  >
+                    Confirm Contract
+                  </button>
+                )}
               </div>
             )}
-          </section>
+          </motion.div>
         </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ---------------- Main Page ---------------- */
+export default function FreelancerMessagesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialConvId = searchParams.get("conversation_id");
+
+  const [currentUser, setCurrentUser] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [myFreelancerId, setMyFreelancerId] = useState<number | null>(null);
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const [contract, setContract] = useState<ContractLite | null>(null);
+
+  const [offerModalOpen, setOfferModalOpen] = useState(false);
+  const [selectedProposalId, setSelectedProposalId] = useState<number | null>(null);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // throttle per conversation
+  const lastSeenTouchRef = useRef<Record<string, number>>({});
+
+  const selectedConv = conversations.find((c) => c.id === selectedId);
+  const sortedConversations = useMemo(() => {
+    const copy = [...conversations];
+    copy.sort((a, b) => {
+      const aTime = Date.parse(a.last_message_at || a.created_at || "");
+      const bTime = Date.parse(b.last_message_at || b.created_at || "");
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    });
+    return copy;
+  }, [conversations]);
+
+  const computeUnreadForFreelancer = useCallback(async (c: Conversation) => {
+    const lastSeen = c.freelancer_last_seen_at || EPOCH_ISO;
+
+    const { count, error } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", c.id)
+      .in("sender_role", ["client", "admin"])
+      .gt("created_at", lastSeen);
+
+    if (error) return 0;
+    return count ?? 0;
+  }, []);
+
+  const markConversationSeen = useCallback(async (conversationId: string) => {
+    if (!conversationId) return;
+
+    const nowIso = new Date().toISOString();
+    const nowMs = Date.parse(nowIso);
+
+    const lastMs = lastSeenTouchRef.current[conversationId] ?? 0;
+    if (nowMs - lastMs < 900) return;
+    lastSeenTouchRef.current[conversationId] = nowMs;
+
+    const { error } = await supabase.rpc("mark_conversation_seen_as_freelancer", {
+      p_conversation_id: conversationId,
+    });
+
+    if (error) {
+      console.error("[chat] mark_conversation_seen_as_freelancer failed:", error);
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conversationId ? { ...c, freelancer_last_seen_at: nowIso, unread_count: 0 } : c
+      )
+    );
+  }, []);
+
+  // 1) Auth + Load Conversations
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+
+      if (!user) {
+        router.push("/freelancer/sign-in");
+        return;
+      }
+      if (!mounted) return;
+      setCurrentUser(user);
+
+      // fetch freelancer id
+      const { data: dbFreelancer, error: freelancerErr } = await supabase
+        .from("freelancers")
+        .select("freelancer_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (freelancerErr || !dbFreelancer?.freelancer_id) {
+        console.error("Freelancer fetch error:", freelancerErr);
+        return;
+      }
+
+      const freelancerId = dbFreelancer.freelancer_id as number;
+      setMyFreelancerId(freelancerId);
+
+      // load conversations
+      const { data: rawConvs, error: convError } = await supabase
+        .from("conversations")
+        .select("id, job_post_id, client_id, freelancer_id, created_at, last_message_at, client_last_seen_at, freelancer_last_seen_at")
+        .eq("freelancer_id", freelancerId)
+        .order("last_message_at", { ascending: false });
+
+      if (convError) console.error("Conversation fetch error", convError);
+      if (!mounted) return;
+
+      if (!rawConvs?.length) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+
+      const jobIds = Array.from(new Set(rawConvs.map((c) => c.job_post_id).filter(Boolean)));
+      const { data: jobs } = await supabase.from("job_posts").select("job_post_id, title").in("job_post_id", jobIds);
+
+      const clientIds = Array.from(new Set(rawConvs.map((c) => c.client_id).filter(Boolean)));
+
+      let clients: Array<{
+        client_id: number;
+        first_name?: string | null;
+        last_name?: string | null;
+        company_name?: string | null;
+      }> = [];
+      if (clientIds.length > 0) {
+        try {
+          const response = await fetch("/api/conversations/client-names", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ client_ids: clientIds }),
+          });
+          const json = await response.json();
+          clients = json.clients || [];
+        } catch (e) {
+          console.error("Error fetching client names:", e);
+        }
+      }
+
+      const enriched = await Promise.all(
+        rawConvs.map(async (c) => {
+          const job = jobs?.find((j) => String(j.job_post_id) === String(c.job_post_id));
+          const client = clients?.find((cl) => String(cl.client_id) === String(c.client_id));
+
+          const { data: lastMsgs } = await supabase
+            .from("messages")
+            .select("body, created_at")
+            .eq("conversation_id", c.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          const unread_count = await computeUnreadForFreelancer(c as Conversation);
+
+          return {
+            ...(c as Conversation),
+            job_posts: job ? { title: job.title } : undefined,
+            client: client || { client_id: c.client_id },
+            last_message_body: lastMsgs?.[0]?.body || null,
+            unread_count,
+          } as Conversation;
+        })
+      );
+
+      if (!mounted) return;
+      setConversations(enriched);
+      setLoading(false);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, computeUnreadForFreelancer]);
+
+  // 2) Select Initial
+  useEffect(() => {
+    if (!loading && initialConvId && conversations.length > 0) {
+      const exists = conversations.find((c) => c.id === initialConvId);
+      if (exists) setSelectedId(exists.id);
+    }
+  }, [loading, initialConvId, conversations]);
+
+  // 2.5) Mark seen on open
+  useEffect(() => {
+    if (!selectedId) return;
+    void markConversationSeen(selectedId);
+  }, [selectedId, markConversationSeen]);
+
+  // 3) Load Messages + subscribe
+  useEffect(() => {
+    if (!selectedId) {
+      setMessages([]);
+      setContract(null);
+      return;
+    }
+
+    let sub: ReturnType<typeof supabase.channel> | undefined;
+
+    (async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", selectedId)
+        .order("created_at", { ascending: true });
+
+      if (data) setMessages(data as MessageRow[]);
+
+      // always mark seen "now" after loading history
+      await markConversationSeen(selectedId);
+
+      setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
+
+      // contract status
+      const conv = conversations.find((c) => c.id === selectedId);
+      if (conv?.job_post_id) {
+        const { data: cData } = await supabase
+          .from("contracts")
+          .select("contract_id, status, proposal_id")
+          .eq("job_post_id", conv.job_post_id)
+          .in("status", ["active", "completed", "disputed"])
+          .maybeSingle();
+        setContract(cData || null);
+      } else {
+        setContract(null);
+      }
+
+      sub = supabase
+        .channel(`chat:${selectedId}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${selectedId}` },
+          (payload) => {
+            const newMsg = payload.new as MessageRow;
+
+            setMessages((prev) => [...prev, newMsg]);
+            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id !== selectedId) return c;
+
+                const fromOtherSide = newMsg.sender_role !== "freelancer";
+                const isActive = document.visibilityState === "visible";
+
+                return {
+                  ...c,
+                  last_message_at: newMsg.created_at,
+                  last_message_body: newMsg.body,
+                  unread_count: fromOtherSide && !isActive ? (c.unread_count || 0) + 1 : 0,
+                };
+              })
+            );
+
+            if (newMsg.sender_role !== "freelancer" && document.visibilityState === "visible") {
+              void markConversationSeen(selectedId);
+            }
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      if (sub) supabase.removeChannel(sub);
+    };
+  }, [selectedId, conversations, markConversationSeen]);
+
+  const handleSend = async (e?: FormEvent) => {
+    e?.preventDefault();
+    if (!selectedId || !currentUser || !input.trim()) return;
+
+    const txt = input.trim();
+    setInput("");
+
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: selectedId,
+      sender_auth_id: currentUser.id,
+      sender_role: "freelancer",
+      body: txt,
+    });
+
+    if (error) {
+      console.error("Send error:", error);
+      setInput(txt);
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    await supabase.from("conversations").update({ last_message_at: nowIso }).eq("id", selectedId);
+
+    setConversations((prev) =>
+      prev.map((c) => (c.id === selectedId ? { ...c, last_message_at: nowIso, last_message_body: txt, unread_count: 0 } : c))
+    );
+
+    void markConversationSeen(selectedId);
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void handleSend();
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/freelancer/sign-in");
+  };
+
+  const locked = !!contract;
+
+  return (
+    <div className="flex h-screen bg-[#fbfbfd]">
+      <FreelancerSidebar onSignOut={handleSignOut} />
+
+      <div className="flex-1 ml-64 h-screen max-h-screen overflow-hidden">
+        <ChatLayout>
+          <ChatSidebar title="Messages">
+            <ConversationList
+              conversations={sortedConversations}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              getAvatar={(c: Conversation) => initials(displayClientName(c.client))}
+              getName={(c: Conversation) => displayClientName(c.client)}
+              getPreview={(c: Conversation) => c.last_message_body || c.job_posts?.title || "Project Inquiry"}
+              getTime={(c: Conversation) =>
+                c.last_message_at
+                  ? new Date(c.last_message_at as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+                  : ""
+              }
+              getUnreadCount={(c: Conversation) => c.unread_count || 0}
+            />
+          </ChatSidebar>
+
+          <ChatWindow selectedId={selectedId}>
+            <div className="h-[70px] border-b border-gray-100 flex items-center justify-between px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-100 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-500">
+                  {initials(displayClientName(selectedConv?.client))}
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 text-[15px] leading-tight">{displayClientName(selectedConv?.client)}</h2>
+                  <p className="text-xs text-gray-400 font-medium truncate max-w-[200px]">{selectedConv?.job_posts?.title}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setOfferModalOpen(true)}
+                  className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition-all shadow-md active:scale-95"
+                >
+                  <FileText size={14} />
+                  <span>Create Offer</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2 bg-white scroll-smooth pb-0">
+              {messages.map((m) => {
+                const isMe = m.sender_role === "freelancer";
+                const pid = parseProposalId(m.body);
+
+                if (pid) {
+                  return (
+                    <ProposalBubble
+                      key={m.id}
+                      proposalId={pid}
+                      isMe={isMe}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setClickPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+                        setSelectedProposalId(pid);
+                      }}
+                    />
+                  );
+                }
+
+                return (
+                  <MessageBubble
+                    key={m.id}
+                    isMe={isMe}
+                    body={m.body}
+                    time={new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  />
+                );
+              })}
+              <div ref={bottomRef} className="h-4" />
+            </div>
+
+            <div className="p-4 bg-white shrink-0 mb-4 px-6 pt-0">
+              <div className="flex items-end gap-3 bg-[#f2f2f5] p-2 rounded-[26px]">
+                <div className="flex-1 py-2 pl-2">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    placeholder="Type a message..."
+                    rows={1}
+                    className="w-full bg-transparent border-none focus:ring-0 p-0 text-[15px] placeholder:text-gray-400 resize-none max-h-[100px] overflow-y-auto leading-relaxed"
+                    style={{ lineHeight: "1.5" }}
+                  />
+                </div>
+
+                {input.trim().length > 0 ? (
+                  <button
+                    onClick={() => void handleSend()}
+                    className="w-9 h-9 bg-[#007AFF] rounded-full flex items-center justify-center text-white mb-0.5 shadow-sm hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Send size={16} className="ml-0.5" />
+                  </button>
+                ) : (
+                  <div className="w-9 h-9" />
+                )}
+              </div>
+              <div className="text-center mt-2">
+                <span className="text-[10px] text-gray-300 font-medium">Start a new contract or manage existing ones securely.</span>
+              </div>
+            </div>
+          </ChatWindow>
+        </ChatLayout>
       </div>
 
-      {/* Offer viewer (accept / counter; always loads by proposalId) */}
-      <OfferViewerModal
-        open={viewerOpen}
-        onClose={() => setViewerOpen(false)}
-        proposalId={viewerProposalId}
-        conversationId={selectedConversation?.id ?? null}
-        currentUserId={currentUserId}
+      <OfferInlineModal
+        open={offerModalOpen}
+        onClose={() => setOfferModalOpen(false)}
+        clientId={selectedConv?.client_id || null}
+        freelancerId={myFreelancerId}
+        jobPostId={selectedConv?.job_post_id || null}
+        conversationId={selectedId}
+        currentUserId={currentUser?.id || null}
+        locked={locked}
       />
-    </main>
+
+      <FreelancerOfferViewerModal
+        open={!!selectedProposalId}
+        onClose={() => setSelectedProposalId(null)}
+        proposalId={selectedProposalId}
+        conversationId={selectedId}
+        currentUserId={currentUser?.id || null}
+        locked={locked}
+        clickPosition={clickPosition}
+        onAfterAction={() => {}}
+      />
+    </div>
   );
 }

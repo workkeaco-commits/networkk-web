@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase/supabase/server'; // use alias, not relative
+import { sendEmail } from "@/lib/email/smtp";
+import { buildFreelancerUnderReviewEmail } from "@/lib/email/templates";
 
 export async function POST(req: Request) {
   const t0 = Date.now();
@@ -18,13 +20,17 @@ export async function POST(req: Request) {
     });
 
     // 1) Auth user
-    const full_name = [payload.firstName || '', payload.lastName || ''].filter(Boolean).join(' ');
+    const firstName = String(payload.firstName || '').trim();
+    const lastName = String(payload.lastName || '').trim();
     const email = String(payload.email || '').toLowerCase();
     const password = String(payload.password || '');
     const phone = String(payload.phone || '');
 
     if (!email || !password) {
       return NextResponse.json({ error: { message: 'Email and password are required' } }, { status: 400 });
+    }
+    if (!firstName || !lastName) {
+      return NextResponse.json({ error: { message: 'First and last name are required' } }, { status: 400 });
     }
 
     const { data: created, error: eAuth } = await supabaseAdmin.auth.admin.createUser({
@@ -82,10 +88,14 @@ export async function POST(req: Request) {
       .from('freelancers')
       .insert({
         auth_user_id: authUserId,
-        full_name, job_title: jobTitle, bio,
+        first_name: firstName,
+        last_name: lastName,
+        job_title: jobTitle,
+        bio,
         skills, phone_number: phone, email,
         personal_img_url: personalImgUrl,
         national_id_img_url: nationalIdPath,
+        approval_status: 'pending',
       })
       .select('freelancer_id')
       .single();
@@ -141,6 +151,16 @@ export async function POST(req: Request) {
         console.error('[signup] certificates insert error:', eCert);
         return NextResponse.json({ error: { message: eCert.message } }, { status: 400 });
       }
+    }
+
+    const welcomeEmail = buildFreelancerUnderReviewEmail({
+      person: { firstName, lastName },
+    });
+
+    try {
+      await sendEmail({ to: email, ...welcomeEmail });
+    } catch (err) {
+      console.error("[signup] welcome email failed:", err);
     }
 
     console.log('[signup] done in', Date.now() - t0, 'ms');
