@@ -32,7 +32,7 @@ type PaymentRow = {
   amount: number | string;
   currency: string | null;
   status: string | null;
-  milestones: MilestoneRow | null;
+  milestones?: MilestoneRow | MilestoneRow[] | null;
 };
 
 type ContractRow = {
@@ -76,14 +76,17 @@ export async function POST(req: NextRequest) {
     let refunded = 0;
     let skipped = 0;
 
-    for (const payment of (payments ?? []) as PaymentRow[]) {
-      const milestone = payment.milestones;
+    for (const payment of payments ?? []) {
+      const paymentRow = payment as PaymentRow;
+      const milestone = Array.isArray(paymentRow.milestones)
+        ? paymentRow.milestones[0] ?? null
+        : paymentRow.milestones ?? null;
       if (!milestone) {
         skipped += 1;
         continue;
       }
 
-      const amountGross = toMoney(payment.amount);
+      const amountGross = toMoney(paymentRow.amount);
       if (amountGross <= 0) {
         skipped += 1;
         continue;
@@ -109,7 +112,7 @@ export async function POST(req: NextRequest) {
         !!confirmDeadlineAt && !!submittedAt && now >= confirmDeadlineAt && !approved;
 
       if (canRelease) {
-        const contract = await getContract(contractCache, payment.contract_id);
+        const contract = await getContract(contractCache, paymentRow.contract_id);
         if (!contract) {
           skipped += 1;
           continue;
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
         const feePercent = toPercent(contract.platform_fee_percent ?? 10);
         const amountNet = roundMoney(amountGross * (1 - feePercent / 100));
 
-        const payoutOk = await ensurePayout(payment, amountNet, contract.freelancer_id, contract.currency);
+        const payoutOk = await ensurePayout(paymentRow, amountNet, contract.freelancer_id, contract.currency);
         if (!payoutOk) {
           skipped += 1;
           continue;
@@ -129,7 +132,7 @@ export async function POST(req: NextRequest) {
           "freelancer_id",
           contract.freelancer_id,
           amountNet,
-          contract.currency || payment.currency || "EGP",
+          contract.currency || paymentRow.currency || "EGP",
           nowIso
         );
         if (!walletOk) {
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin
           .from("payments")
           .update({ status: "released" })
-          .eq("payment_id", payment.payment_id);
+          .eq("payment_id", paymentRow.payment_id);
 
         await supabaseAdmin
           .from("milestones")
@@ -155,7 +158,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (overdueNoSubmission || confirmExpired) {
-        const contract = await getContract(contractCache, payment.contract_id);
+        const contract = await getContract(contractCache, paymentRow.contract_id);
         if (!contract) {
           skipped += 1;
           continue;
@@ -166,7 +169,7 @@ export async function POST(req: NextRequest) {
           "client_id",
           contract.client_id,
           amountGross,
-          contract.currency || payment.currency || "EGP",
+          contract.currency || paymentRow.currency || "EGP",
           nowIso
         );
         if (!walletOk) {
@@ -177,7 +180,7 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin
           .from("payments")
           .update({ status: "refunded" })
-          .eq("payment_id", payment.payment_id);
+          .eq("payment_id", paymentRow.payment_id);
 
         await supabaseAdmin
           .from("milestones")
