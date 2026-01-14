@@ -418,7 +418,7 @@ export default function StickyChatModal({ open, role, onClose }: Props) {
               <ConversationList
                 conversations={sortedConversations}
                 selectedId={selectedId}
-                onSelect={(id) => setSelectedId(id)}
+                onSelect={(id: string) => setSelectedId(id)}
                 getAvatar={(c: Conversation) =>
                   role === "client"
                     ? {
