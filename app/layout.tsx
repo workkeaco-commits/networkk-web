@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import StickyMessagesButton from "@/components/StickyMessagesButton";
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50`}
       >
         {children}
-        <AuthRedirect />
+        <Suspense fallback={null}>
+          <AuthRedirect />
+        </Suspense>
         <StickyMessagesButton />
       </body>
     </html>
