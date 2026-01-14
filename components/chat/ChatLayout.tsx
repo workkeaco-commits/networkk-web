@@ -1,9 +1,23 @@
 "use client";
 
-import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 
-export default function ChatLayout({ children }) {
+type ChatLayoutProps = {
+    children: ReactNode;
+};
+
+type ChatSidebarProps = {
+    children: ReactNode;
+    title?: string;
+};
+
+type ChatWindowProps = {
+    children: ReactNode;
+    selectedId?: number | string | null;
+};
+
+export default function ChatLayout({ children }: ChatLayoutProps) {
     return (
         <div className="flex h-screen bg-white text-[#1d1d1f] antialiased overflow-hidden">
             {children}
@@ -11,7 +25,7 @@ export default function ChatLayout({ children }) {
     );
 }
 
-export function ChatSidebar({ children, title = "Messages" }) {
+export function ChatSidebar({ children, title = "Messages" }: ChatSidebarProps) {
     return (
         <div className="w-full md:w-[350px] lg:w-[380px] border-r border-gray-200 flex flex-col bg-[#fbfbfd]">
             <div className="p-5 pb-3">
@@ -32,7 +46,7 @@ export function ChatSidebar({ children, title = "Messages" }) {
     );
 }
 
-export function ChatWindow({ children, selectedId }) {
+export function ChatWindow({ children, selectedId }: ChatWindowProps) {
     if (!selectedId) {
         return (
             <div className="flex-1 hidden md:flex items-center justify-center bg-white">
