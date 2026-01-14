@@ -20,8 +20,11 @@ type ContractRow = {
   fees_total: number | null;
   currency: string | null;
   created_at: string;
-  job_posts?: { title: string | null } | null;
-  clients?: { first_name?: string | null; last_name?: string | null; company_name?: string | null; client_id?: number | null } | null;
+  job_posts?: { title: string | null }[] | { title: string | null } | null;
+  clients?:
+    | { first_name?: string | null; last_name?: string | null; company_name?: string | null; client_id?: number | null }[]
+    | { first_name?: string | null; last_name?: string | null; company_name?: string | null; client_id?: number | null }
+    | null;
   milestones?: MilestoneRow[] | null;
 };
 
@@ -106,7 +109,7 @@ export default function FreelancerContractsPage() {
         setErrorMsg("Could not load contracts.");
         setContracts([]);
       } else {
-        setContracts((data as ContractRow[]) || []);
+        setContracts((data ?? []) as ContractRow[]);
       }
 
       setLoading(false);
@@ -171,10 +174,12 @@ export default function FreelancerContractsPage() {
           ) : (
             <div className="grid gap-6">
               {contracts.map((c) => {
+                const clientInfo = Array.isArray(c.clients) ? c.clients[0] ?? null : c.clients ?? null;
                 const clientName =
-                  c.clients?.company_name?.trim() ||
-                  [c.clients?.first_name, c.clients?.last_name].filter(Boolean).join(" ").trim() ||
-                  `Client #${c.clients?.client_id ?? "?"}`;
+                  clientInfo?.company_name?.trim() ||
+                  [clientInfo?.first_name, clientInfo?.last_name].filter(Boolean).join(" ").trim() ||
+                  `Client #${clientInfo?.client_id ?? "?"}`;
+                const jobTitle = Array.isArray(c.job_posts) ? c.job_posts[0]?.title ?? null : c.job_posts?.title ?? null;
                 const nextDue = getNextDue(c.milestones);
                 const statusLabel = (c.status || "active").toString();
 
@@ -192,7 +197,7 @@ export default function FreelancerContractsPage() {
                           </div>
                           <div>
                             <h3 className="text-[21px] font-semibold text-black leading-tight mb-1">
-                              {c.job_posts?.title || "Untitled contract"}
+                              {jobTitle || "Untitled contract"}
                             </h3>
                             <div className="flex items-center gap-2">
                               <span
