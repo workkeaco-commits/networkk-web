@@ -16,6 +16,13 @@ type FreelancerRow = {
   created_at: string;
 };
 
+type ClientRow = {
+  client_id: number;
+  first_name: string | null;
+  last_name: string | null;
+  company_name: string | null;
+};
+
 function initials(name: string) {
   if (!name) return "F";
   const parts = name.trim().split(/\s+/).slice(0, 2);
@@ -30,6 +37,12 @@ function displayFreelancerName(f: FreelancerRow | null) {
   if (!f) return "Freelancer";
   const name = [f.first_name, f.last_name].filter(Boolean).join(" ").trim();
   return name || `Freelancer #${f.freelancer_id}`;
+}
+
+function displayClientName(c: ClientRow | null) {
+  if (!c) return "A client";
+  const name = [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
+  return name || c.company_name || `Client #${c.client_id}`;
 }
 
 export default function InviteFreelancersPage() {
@@ -50,6 +63,9 @@ export default function InviteFreelancersPage() {
   const [sending, setSending] = useState(false);
   const [messageError, setMessageError] = useState("");
   const [messageSuccess, setMessageSuccess] = useState("");
+  const [invitedFreelancers, setInvitedFreelancers] = useState<Set<number>>(new Set());
+  const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
+  const [inviteError, setInviteError] = useState("");
 
   async function load(all = false) {
     setLoading(true);
@@ -81,9 +97,82 @@ export default function InviteFreelancersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
-  function handleInvite(freelancerId: number) {
-    // You can keep this or later wire it to proposals/invites
-    alert(`Invite sent to freelancer #${freelancerId} for job #${jobId}`);
+  async function handleInvite(freelancerId: number) {
+    if (!jobId || invitedFreelancers.has(freelancerId)) return;
+
+    setInviteError("");
+    setInvitingIds((prev) => new Set(prev).add(freelancerId));
+
+    try {
+      const numericJobId = Number(jobId);
+      if (Number.isNaN(numericJobId)) {
+        throw new Error("Invalid job id.");
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push(`/client/sign-in?next=/jobs/${jobId}/invite`);
+        return;
+      }
+
+      const { data: clientRow, error: clientErr } = await supabase
+        .from("clients")
+        .select("client_id, first_name, last_name, company_name")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (clientErr || !clientRow) {
+        throw new Error("Could not find your client profile.");
+      }
+
+      const clientId = clientRow.client_id as number;
+
+      const { data: jobRow, error: jobErr } = await supabase
+        .from("job_posts")
+        .select("client_id, title")
+        .eq("job_post_id", numericJobId)
+        .single();
+
+      if (jobErr || !jobRow) {
+        throw new Error("Job post not found.");
+      }
+
+      if (jobRow.client_id !== clientId) {
+        throw new Error("You are not allowed to invite freelancers for this job.");
+      }
+
+      const senderName = displayClientName(clientRow as ClientRow);
+      const title = jobRow.title || jobTitle || `Job #${numericJobId}`;
+
+      const { error: notifyErr } = await supabase.from("notifications").insert({
+        recipient_role: "freelancer",
+        recipient_id: freelancerId,
+        type: "job_invite",
+        title: "New job invite",
+        body: `${senderName} invited you to submit a proposal for "${title}".`,
+        link: `/jobs?job_id=${numericJobId}`,
+        job_post_id: numericJobId,
+        metadata: { client_id: clientId },
+      });
+
+      if (notifyErr) {
+        console.error("Notification insert failed", notifyErr);
+        throw new Error("Failed to send invite.");
+      }
+
+      setInvitedFreelancers((prev) => new Set(prev).add(freelancerId));
+    } catch (err: any) {
+      setInviteError(err?.message || "Failed to send invite.");
+    } finally {
+      setInvitingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(freelancerId);
+        return next;
+      });
+    }
   }
 
   function openMessageModal(f: FreelancerRow) {
@@ -136,7 +225,7 @@ export default function InviteFreelancersPage() {
       // 2) Get client row
       const { data: clientRow, error: clientErr } = await supabase
         .from("clients")
-        .select("client_id")
+        .select("client_id, first_name, last_name, company_name")
         .eq("auth_user_id", user.id)
         .single();
 
@@ -218,6 +307,24 @@ export default function InviteFreelancersPage() {
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", conversationId);
 
+      // 7) Create notification for freelancer
+      const senderName = displayClientName(clientRow as ClientRow);
+      const title = jobTitle || `Job #${numericJobId}`;
+      const { error: notifyErr } = await supabase.from("notifications").insert({
+        recipient_role: "freelancer",
+        recipient_id: selectedFreelancer.freelancer_id,
+        type: "job_invite",
+        title: "New job invite",
+        body: `${senderName} invited you to submit a proposal for "${title}".`,
+        link: `/jobs?job_id=${numericJobId}`,
+        job_post_id: numericJobId,
+        metadata: { conversation_id: conversationId, client_id: clientId },
+      });
+
+      if (notifyErr) {
+        console.error("Notification insert failed", notifyErr);
+      }
+
       setMessageSuccess("Message sent! The freelancer will see it in their inbox.");
       setMessageText("");
 
@@ -259,6 +366,9 @@ export default function InviteFreelancersPage() {
               : "from all categories"}
             .
           </p>
+          {inviteError && (
+            <p className="mt-2 text-xs text-red-600">{inviteError}</p>
+          )}
         </header>
 
         <div className="mb-4 flex items-center gap-2">
@@ -356,9 +466,14 @@ export default function InviteFreelancersPage() {
                     <div className="flex flex-col items-end gap-2">
                       <button
                         onClick={() => handleInvite(f.freelancer_id)}
-                        className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-950"
+                        disabled={invitedFreelancers.has(f.freelancer_id) || invitingIds.has(f.freelancer_id)}
+                        className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-950 disabled:opacity-60"
                       >
-                        Invite
+                        {invitingIds.has(f.freelancer_id)
+                          ? "Inviting..."
+                          : invitedFreelancers.has(f.freelancer_id)
+                          ? "Invited"
+                          : "Invite"}
                       </button>
                       <button
                         onClick={() => openMessageModal(f)}

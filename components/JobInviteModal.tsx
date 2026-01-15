@@ -16,6 +16,13 @@ type FreelancerRow = {
     created_at: string;
 };
 
+type ClientRow = {
+    client_id: number;
+    first_name: string | null;
+    last_name: string | null;
+    company_name: string | null;
+};
+
 interface JobInviteModalProps {
     jobId: number;
     isOpen: boolean;
@@ -38,6 +45,12 @@ function displayFreelancerName(f: FreelancerRow | null) {
     return name || `Freelancer #${f.freelancer_id}`;
 }
 
+function displayClientName(c: ClientRow | null) {
+    if (!c) return "A client";
+    const name = [c.first_name, c.last_name].filter(Boolean).join(" ").trim();
+    return name || c.company_name || `Client #${c.client_id}`;
+}
+
 export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModalProps) {
     const [loading, setLoading] = useState(true);
     const [rows, setRows] = useState<FreelancerRow[]>([]);
@@ -54,6 +67,8 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
     const [messageSuccess, setMessageSuccess] = useState("");
 
     const [invitedFreelancers, setInvitedFreelancers] = useState<Set<number>>(new Set());
+    const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
+    const [inviteError, setInviteError] = useState("");
 
     useEffect(() => {
         if (isOpen && jobId) {
@@ -86,11 +101,81 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
         }
     }
 
-    function handleInvite(freelancerId: number) {
-        // You can keep this or later wire it to proposals/invites
-        // For now mocking success
-        setInvitedFreelancers(prev => new Set(prev).add(freelancerId));
-        // alert(`Invite sent to freelancer #${freelancerId} for job #${jobId}`);
+    async function handleInvite(freelancerId: number) {
+        if (!jobId || invitedFreelancers.has(freelancerId)) return;
+
+        setInviteError("");
+        setInvitingIds((prev) => new Set(prev).add(freelancerId));
+
+        try {
+            const numericJobId = Number(jobId);
+            if (Number.isNaN(numericJobId)) {
+                throw new Error("Invalid job id.");
+            }
+
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            if (!user) {
+                throw new Error("You must be logged in.");
+            }
+
+            const { data: clientRow, error: clientErr } = await supabase
+                .from("clients")
+                .select("client_id, first_name, last_name, company_name")
+                .eq("auth_user_id", user.id)
+                .single();
+
+            if (clientErr || !clientRow) {
+                throw new Error("Could not find your client profile.");
+            }
+
+            const clientId = clientRow.client_id as number;
+
+            const { data: jobRow, error: jobErr } = await supabase
+                .from("job_posts")
+                .select("client_id, title")
+                .eq("job_post_id", numericJobId)
+                .single();
+
+            if (jobErr || !jobRow) {
+                throw new Error("Job post not found.");
+            }
+
+            if (jobRow.client_id !== clientId) {
+                throw new Error("You are not allowed to invite freelancers for this job.");
+            }
+
+            const senderName = displayClientName(clientRow as ClientRow);
+            const title = jobRow.title || jobTitle || `Job #${numericJobId}`;
+
+            const { error: notifyErr } = await supabase.from("notifications").insert({
+                recipient_role: "freelancer",
+                recipient_id: freelancerId,
+                type: "job_invite",
+                title: "New job invite",
+                body: `${senderName} invited you to submit a proposal for "${title}".`,
+                link: `/jobs?job_id=${numericJobId}`,
+                job_post_id: numericJobId,
+                metadata: { client_id: clientId },
+            });
+
+            if (notifyErr) {
+                console.error("Notification insert failed", notifyErr);
+                throw new Error("Failed to send invite.");
+            }
+
+            setInvitedFreelancers((prev) => new Set(prev).add(freelancerId));
+        } catch (err: any) {
+            setInviteError(err?.message || "Failed to send invite.");
+        } finally {
+            setInvitingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(freelancerId);
+                return next;
+            });
+        }
     }
 
     function openMessageModal(f: FreelancerRow) {
@@ -141,7 +226,7 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
             // 2) Get client row
             const { data: clientRow, error: clientErr } = await supabase
                 .from("clients")
-                .select("client_id")
+                .select("client_id, first_name, last_name, company_name")
                 .eq("auth_user_id", user.id)
                 .single();
 
@@ -223,6 +308,24 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                 .update({ last_message_at: new Date().toISOString() })
                 .eq("id", conversationId);
 
+            // 7) Create notification for freelancer
+            const senderName = displayClientName(clientRow as ClientRow);
+            const title = jobTitle || `Job #${numericJobId}`;
+            const { error: notifyErr } = await supabase.from("notifications").insert({
+                recipient_role: "freelancer",
+                recipient_id: selectedFreelancer.freelancer_id,
+                type: "job_invite",
+                title: "New job invite",
+                body: `${senderName} invited you to submit a proposal for "${title}".`,
+                link: `/jobs?job_id=${numericJobId}`,
+                job_post_id: numericJobId,
+                metadata: { conversation_id: conversationId, client_id: clientId },
+            });
+
+            if (notifyErr) {
+                console.error("Notification insert failed", notifyErr);
+            }
+
             setMessageSuccess("Message sent! The freelancer will see it in their inbox.");
             setMessageText("");
 
@@ -293,6 +396,11 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                 Show All
                             </button>
                         </div>
+                        {inviteError && (
+                            <div className="px-8 pt-4 text-xs font-medium text-red-600">
+                                {inviteError}
+                            </div>
+                        )}
 
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto p-8 bg-[#fbfbfd]">
@@ -332,6 +440,7 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                             .filter(Boolean)
                                             .slice(0, 4) || [];
                                         const isInvited = invitedFreelancers.has(f.freelancer_id);
+                                        const isInviting = invitingIds.has(f.freelancer_id);
 
                                         return (
                                             <motion.div
@@ -367,13 +476,17 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                                 <div className="mt-5 flex gap-2">
                                                     <button
                                                         onClick={() => handleInvite(f.freelancer_id)}
-                                                        disabled={isInvited}
-                                                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${isInvited
+                                                        disabled={isInvited || isInviting}
+                                                        className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${isInvited
                                                                 ? "bg-green-50 text-green-600 cursor-default"
                                                                 : "bg-black text-white hover:opacity-90 active:scale-95"
                                                             }`}
                                                     >
-                                                        {isInvited ? (
+                                                        {isInviting ? (
+                                                            <>
+                                                                <Loader2 size={14} className="animate-spin" /> Inviting
+                                                            </>
+                                                        ) : isInvited ? (
                                                             <>
                                                                 <Check size={14} /> Invited
                                                             </>

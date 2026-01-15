@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/browser";
 import { Plus, Briefcase, Loader2, ExternalLink, Users, Star } from "lucide-react";
@@ -56,6 +56,8 @@ async function fetchInitialFreelancerProposalCounts(jobIds: number[]) {
 
 export default function ClientDashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoOpenedJobRef = useRef<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [fatalError, setFatalError] = useState<string | null>(null);
@@ -144,6 +146,21 @@ export default function ClientDashboardPage() {
       mounted = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (loading || fatalError) return;
+    const rawJobId = searchParams.get("job_id");
+    if (!rawJobId) return;
+    const jobId = Number(rawJobId);
+    if (!Number.isFinite(jobId)) return;
+    if (autoOpenedJobRef.current === jobId) return;
+    const match = jobs.find((job) => job.job_post_id === jobId);
+    if (!match) return;
+
+    setSelectedJob(match);
+    setIsModalOpen(true);
+    autoOpenedJobRef.current = jobId;
+  }, [searchParams, jobs, loading, fatalError]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();

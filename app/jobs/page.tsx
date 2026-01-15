@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, ChangeEvent, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, ChangeEvent, FormEvent } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import { AnimatePresence, motion } from "framer-motion";
 import FreelancerSidebar from "@/components/FreelancerSidebar";
@@ -114,6 +114,8 @@ type ProposalFormState = {
 
 export default function JobsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoOpenedJobRef = useRef<number | null>(null);
 
   // 🔒 Auth guard & freelancer info
   const [authChecking, setAuthChecking] = useState(true);
@@ -271,6 +273,20 @@ export default function JobsPage() {
       cancelled = true;
     };
   }, [authChecking, freelancer]);
+
+  useEffect(() => {
+    if (loadingJobs || !freelancer || !authUserId) return;
+    const rawJobId = searchParams.get("job_id");
+    if (!rawJobId) return;
+    const jobId = Number(rawJobId);
+    if (!Number.isFinite(jobId)) return;
+    if (autoOpenedJobRef.current === jobId) return;
+    const match = jobs.find((job) => job.id === jobId);
+    if (!match) return;
+
+    openModal(match);
+    autoOpenedJobRef.current = jobId;
+  }, [searchParams, jobs, loadingJobs, freelancer, authUserId]);
 
   /* ---------------- Proposal modal logic ---------------- */
 

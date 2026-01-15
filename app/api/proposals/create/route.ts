@@ -157,6 +157,29 @@ export async function POST(req: NextRequest) {
     const clientRow = clientRes.data;
     const freelancerRow = freelancerRes.data;
 
+    if (offered_by === "freelancer") {
+      const senderName = [freelancerRow?.first_name, freelancerRow?.last_name].filter(Boolean).join(" ").trim();
+      const link = conversation_id
+        ? `/client/messages?conversation_id=${conversation_id}`
+        : `/client/dashboard?job_id=${job_post_id}`;
+
+      const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
+        recipient_role: "client",
+        recipient_id: client_id,
+        type: "proposal_received",
+        title: "New proposal received",
+        body: `${senderName || "A freelancer"} sent a proposal for "${jobTitle}".`,
+        link,
+        job_post_id,
+        proposal_id: inserted.proposal_id,
+        metadata: { conversation_id, freelancer_id },
+      });
+
+      if (notifyErr) {
+        console.error("[proposals/create] notifications insert failed:", notifyErr);
+      }
+    }
+
     if (offered_by === "freelancer" && clientRow?.email) {
       const senderName = [freelancerRow?.first_name, freelancerRow?.last_name].filter(Boolean).join(" ").trim();
       const emailPayload = buildProposalReceivedEmail({

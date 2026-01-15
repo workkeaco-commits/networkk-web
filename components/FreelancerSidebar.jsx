@@ -13,6 +13,7 @@ import {
     FileText,
     Wallet,
 } from "lucide-react";
+import NotificationsBell from "@/components/NotificationsBell";
 
 export default function FreelancerSidebar({ onSignOut }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -48,6 +49,11 @@ export default function FreelancerSidebar({ onSignOut }) {
                         className={`h-9 transition-all duration-300 ${isCollapsed ? "w-8 object-left overflow-hidden" : "w-auto"}`}
                     />
                 </div>
+            </div>
+
+            {/* Notifications */}
+            <div className={`px-3 mb-3 ${isCollapsed ? "flex justify-center" : ""}`}>
+                <NotificationsBell role="freelancer" showLabel={!isCollapsed} />
             </div>
 
             {/* Navigation */}
