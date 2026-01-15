@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, ChangeEvent, FormEvent } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, ChangeEvent, FormEvent } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
@@ -112,7 +112,7 @@ type ProposalFormState = {
 
 /* ---------------- Page ---------------- */
 
-export default function JobsPage() {
+function JobsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const autoOpenedJobRef = useRef<number | null>(null);
@@ -738,5 +738,13 @@ export default function JobsPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
+      <JobsPageContent />
+    </Suspense>
   );
 }
