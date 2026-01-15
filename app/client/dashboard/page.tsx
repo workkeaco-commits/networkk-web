@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/browser";
@@ -54,7 +54,7 @@ async function fetchInitialFreelancerProposalCounts(jobIds: number[]) {
   return counts;
 }
 
-export default function ClientDashboardPage() {
+function ClientDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const autoOpenedJobRef = useRef<number | null>(null);
@@ -383,5 +383,13 @@ export default function ClientDashboardPage() {
         onRefresh={() => router.refresh()}
       />
     </div>
+  );
+}
+
+export default function ClientDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
+      <ClientDashboardContent />
+    </Suspense>
   );
 }
