@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import { AnimatePresence, motion } from "framer-motion";
 import FreelancerSidebar from "@/components/FreelancerSidebar";
-import { Search, Loader2, MapPin, DollarSign, Clock, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Search, Loader2, MapPin, DollarSign, Clock, CalendarDays, CheckCircle2, X } from "lucide-react";
 
 /* ---------------- Fixed policy ---------------- */
 
@@ -115,7 +115,7 @@ type ProposalFormState = {
 function JobsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const autoOpenedJobRef = useRef<number | null>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   // 🔒 Auth guard & freelancer info
   const [authChecking, setAuthChecking] = useState(true);
@@ -125,6 +125,7 @@ function JobsPageContent() {
   // Jobs
   const [jobs, setJobs] = useState<JobCard[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
+  const [highlightJobId, setHighlightJobId] = useState<number | null>(null);
 
   // Already applied jobs (initial freelancer proposals)
   const [appliedJobIds, setAppliedJobIds] = useState<Set<number>>(new Set());
@@ -132,6 +133,7 @@ function JobsPageContent() {
   // Proposal modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobCard | null>(null);
+  const [focusedJob, setFocusedJob] = useState<JobCard | null>(null);
 
   const [form, setForm] = useState<ProposalFormState>({
     message: "",
@@ -141,6 +143,7 @@ function JobsPageContent() {
 
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const focusedAlreadyApplied = focusedJob ? appliedJobIds.has(focusedJob.id) : false;
 
   // 1) Auth guard: must be logged in AND be a freelancer
   useEffect(() => {
@@ -193,12 +196,18 @@ function JobsPageContent() {
       try {
         setLoadingJobs(true);
 
+        const inviteJobIdRaw = searchParams.get("job_id");
+        const inviteJobId = Number(inviteJobIdRaw || "");
+        const hasInviteJobId = Number.isFinite(inviteJobId);
+
         let query = supabase
           .from("job_posts")
           .select("job_post_id, client_id, title, engagement_type, description, skills, price, price_currency, created_at")
           .order("created_at", { ascending: false });
 
-        if (freelancer.category_id) {
+        if (freelancer.category_id && hasInviteJobId) {
+          query = query.or(`category_id.eq.${freelancer.category_id},job_post_id.eq.${inviteJobId}`);
+        } else if (freelancer.category_id) {
           query = query.eq("category_id", freelancer.category_id);
         }
 
@@ -272,7 +281,7 @@ function JobsPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [authChecking, freelancer]);
+  }, [authChecking, freelancer, searchParams]);
 
   useEffect(() => {
     if (loadingJobs || !freelancer || !authUserId) return;
@@ -280,13 +289,36 @@ function JobsPageContent() {
     if (!rawJobId) return;
     const jobId = Number(rawJobId);
     if (!Number.isFinite(jobId)) return;
-    if (autoOpenedJobRef.current === jobId) return;
     const match = jobs.find((job) => job.id === jobId);
     if (!match) return;
 
-    openModal(match);
-    autoOpenedJobRef.current = jobId;
+    setIsModalOpen(false);
+    setSelectedJob(null);
+    setFocusedJob(match);
+    setHighlightJobId(jobId);
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setHighlightJobId((current) => (current === jobId ? null : current));
+    }, 4000);
+
+    const cardId = `job-card-${jobId}`;
+    window.requestAnimationFrame(() => {
+      const node = document.getElementById(cardId);
+      if (node) {
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
   }, [searchParams, jobs, loadingJobs, freelancer, authUserId]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   /* ---------------- Proposal modal logic ---------------- */
 
@@ -464,6 +496,25 @@ function JobsPageContent() {
     router.push("/freelancer/sign-in");
   };
 
+  const openFocusedCard = (job: JobCard) => {
+    setFocusedJob(job);
+  };
+
+  const closeFocusedCard = () => {
+    setFocusedJob(null);
+  };
+
+  useEffect(() => {
+    if (!focusedJob) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeFocusedCard();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [focusedJob]);
+
   /* ---------------- Auth loading screen ---------------- */
 
   if (authChecking) {
@@ -516,18 +567,26 @@ function JobsPageContent() {
             ) : (
               jobs.map((job, i) => {
                 const alreadyApplied = appliedJobIds.has(job.id);
+                const isHighlighted = highlightJobId === job.id;
                 return (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
                     key={job.id}
-                    className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group"
+                    id={`job-card-${job.id}`}
+                    className={`bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all group ${isHighlighted ? "ring-2 ring-blue-500/60 shadow-lg shadow-blue-500/10" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-4 mb-6">
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {job.title}
+                          <button
+                            type="button"
+                            onClick={() => openFocusedCard(job)}
+                            className="text-left hover:text-blue-600 transition-colors"
+                          >
+                            {job.title}
+                          </button>
                         </h2>
                         <div className="flex flex-wrap gap-4 mt-3 text-sm font-medium text-gray-500">
                           <div className="flex items-center gap-1.5">
@@ -589,6 +648,95 @@ function JobsPageContent() {
           </div>
         </div>
       </main>
+
+      {/* Focused job card */}
+      <AnimatePresence>
+        {focusedJob && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeFocusedCard}
+              className="absolute inset-0 bg-slate-900/30 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              className="relative w-full max-w-3xl rounded-[36px] border border-white/60 bg-white/85 shadow-2xl shadow-slate-900/20 backdrop-blur-xl"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-white/70 px-8 py-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    Focused job
+                  </p>
+                  <h3 className="mt-2 text-2xl font-bold text-slate-900">
+                    {focusedJob.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeFocusedCard}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-white/70 text-slate-500 transition hover:bg-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="px-8 py-6">
+                <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-600">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin size={16} /> {focusedJob.location}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={16} /> {focusedJob.typeLabel}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarDays size={16} /> {focusedJob.postedAtLabel}
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-[24px] border border-white/70 bg-white/70 p-5 text-lg font-medium text-slate-700 leading-relaxed">
+                  {focusedJob.description}
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {focusedJob.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1.5 rounded-xl bg-white/80 text-slate-600 text-xs font-bold uppercase tracking-wide border border-white/70"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-white/70 px-8 py-6">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-2 text-sm font-bold text-slate-900">
+                  <DollarSign size={16} className="text-emerald-500" />
+                  {focusedJob.budgetLabel}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeFocusedCard();
+                    openModal(focusedJob);
+                  }}
+                  disabled={focusedAlreadyApplied}
+                  className="rounded-[20px] bg-slate-900 px-8 py-3 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-95 disabled:cursor-default disabled:bg-emerald-50 disabled:text-emerald-600"
+                >
+                  {focusedAlreadyApplied ? "Applied" : "Apply now"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Proposal Modal Overlay */}
       <AnimatePresence>

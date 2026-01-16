@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bell, Briefcase, Check, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/browser";
 
@@ -47,12 +47,26 @@ function iconForType(type: string) {
   return Bell;
 }
 
+function withOpenNonce(link: string, nonce: string) {
+  try {
+    const base =
+      typeof window !== "undefined" ? window.location.origin : "http://localhost";
+    const url = new URL(link, base);
+    url.searchParams.set("open", nonce);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    const joiner = link.includes("?") ? "&" : "?";
+    return `${link}${joiner}open=${encodeURIComponent(nonce)}`;
+  }
+}
+
 export default function NotificationsBell({
   role,
   showLabel = true,
   panelSide = "right",
   className = "",
 }: NotificationsBellProps) {
+  const router = useRouter();
   const [recipientId, setRecipientId] = useState<number | null>(null);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -291,17 +305,22 @@ export default function NotificationsBell({
 
                   if (n.link) {
                     return (
-                      <Link
+                      <button
                         key={n.notification_id}
-                        href={n.link}
+                        type="button"
                         onClick={() => {
                           markRead(n.notification_id);
                           setOpen(false);
+                          const target = withOpenNonce(
+                            n.link!,
+                            `${n.notification_id}-${Date.now()}`
+                          );
+                          router.push(target);
                         }}
                         className={`${baseClasses} ${rowClasses}`}
                       >
                         {inner}
-                      </Link>
+                      </button>
                     );
                   }
 
