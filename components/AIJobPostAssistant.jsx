@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, CheckCircle, ArrowRight, User, Bot, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight, User, Bot, AlertCircle, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 
@@ -245,91 +245,130 @@ export default function AIJobPostAssistant({ clientName = "there" }) {
 
   // ---------- INTAKE CHAT (GPT STYLE) ----------
   return (
-    <div className="w-full flex-1 flex flex-col relative animate-fade-in pb-24">
+    <div className="w-full flex-1 flex flex-col relative animate-fade-in">
+      {messages.length === 0 ? (
+        <div className="w-full max-w-3xl mx-auto py-12 px-6">
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-[#10b8a6] via-teal-500 to-emerald-500 rounded-[48px] blur opacity-10 group-hover:opacity-20 transition duration-1000" />
 
-      {/* Messages Area */}
-      <div
-        ref={listRef}
-        className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide max-w-3xl mx-auto w-full"
-      >
-        {messages.map((m, idx) => (
-          <div key={idx} className={`flex gap-4 md:gap-6 ${m.role === 'user' ? 'justify-end' : 'justify-start'} mb-8`}>
-            <div className={`flex gap-4 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-gray-100 ${m.role === 'user' ? 'bg-gray-900' : 'bg-white'}`}>
-                {m.role === 'user' ? <User size={14} className="text-white" /> : <Bot size={14} className="text-blue-600" />}
+            <div className="relative bg-white border border-gray-100/50 rounded-[48px] p-10 md:p-14 shadow-sm flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center mb-8 shadow-xl shadow-black/10 transition-transform group-hover:scale-110 duration-500">
+                <Zap className="text-white fill-white" size={28} />
               </div>
-              <div className={`text-[17px] leading-relaxed whitespace-pre-line ${m.role === 'user' ? 'text-gray-900 font-medium' : 'text-gray-800'}`}>
-                {m.content}
-              </div>
-            </div>
-          </div>
-        ))}
 
-        {busy && (
-          <div className="flex justify-start gap-4 md:gap-6">
-            <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center shrink-0">
-              <Bot size={14} className="text-blue-600" />
-            </div>
-            <div className="flex items-center gap-1.5 pt-2">
-              <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
-              <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
-              <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input Area (Greeting + Input Box) */}
-      <div className="sticky bottom-0 pb-12 pt-2 px-6 bg-gradient-to-t from-[#fbfbfd] via-[#fbfbfd] to-transparent">
-        <div className="max-w-3xl mx-auto">
-
-          {messages.length === 0 && (
-            <div className="text-center mb-6">
-              <h1 className="text-2xl md:text-[44px] font-bold tracking-tight text-gray-900 leading-tight">
+              <h3 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 mb-8 whitespace-nowrap leading-tight">
                 {clientName}, what do you want to build today?
-              </h1>
+              </h3>
+
+              <div className="w-full max-w-lg relative">
+                <div className="relative group bg-[#f4f4f5] rounded-[28px] transition-all focus-within:bg-white focus-within:ring-1 focus-within:ring-gray-200 focus-within:shadow-lg">
+                  <textarea
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    placeholder="Describe what you're looking for..."
+                    className="w-full bg-transparent border-none rounded-[28px] px-8 py-5 pr-14 text-[15px] font-medium resize-none outline-none min-h-[64px] max-h-48 scrollbar-hide"
+                    rows={1}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                    }}
+                  />
+
+                  <div className="absolute right-3 bottom-3">
+                    {(userInput.trim() || busy) && (
+                      <button
+                        onClick={handleSend}
+                        disabled={busy || !userInput.trim()}
+                        className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center transition-all hover:opacity-80 active:scale-95 disabled:opacity-10"
+                      >
+                        {busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={20} strokeWidth={2.5} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-gray-400 text-center mt-6 font-medium">
+                  By messaging Networkk, you agree to our Terms and have read our Privacy Policy.
+                </p>
+              </div>
             </div>
-          )}
-
-          <div className="flex justify-center gap-8 mb-4">
-            {messages.length > 0 && (
-              <button onClick={resetAll} className="text-xs font-bold tracking-widest uppercase text-gray-400 hover:text-red-500 transition-colors">
-                Start Over
-              </button>
-            )}
           </div>
+        </div>
+      ) : (
+        <div className="w-full max-w-3xl mx-auto py-8 px-6">
+          <div className="bg-white border border-gray-100/50 rounded-[48px] shadow-sm overflow-hidden flex flex-col min-h-[420px]">
+            <div
+              ref={listRef}
+              className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide"
+            >
+              {messages.map((m, idx) => (
+                <div key={idx} className={`flex gap-4 md:gap-6 ${m.role === "user" ? "justify-end" : "justify-start"} mb-8`}>
+                  <div className={`flex gap-4 max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-gray-100 ${m.role === "user" ? "bg-gray-900" : "bg-white"}`}>
+                      {m.role === "user" ? <User size={14} className="text-white" /> : <Bot size={14} className="text-blue-600" />}
+                    </div>
+                    <div className={`text-[15px] leading-relaxed whitespace-pre-line ${m.role === "user" ? "text-gray-900 font-medium" : "text-gray-800"}`}>
+                      {m.content}
+                    </div>
+                  </div>
+                </div>
+              ))}
 
-          <div className="relative group bg-[#f4f4f5] rounded-[32px] transition-all focus-within:bg-white focus-within:ring-1 focus-within:ring-gray-200 focus-within:shadow-lg">
-            <textarea
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Message networkk"
-              className="w-full bg-transparent border-none rounded-[32px] px-8 py-5 pr-16 text-[17px] font-medium resize-none outline-none min-h-[64px] max-h-48 scrollbar-hide"
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-              }}
-            />
-
-            {/* Send Button (Right) */}
-            <div className="absolute right-3 bottom-3 flex items-center gap-2">
-              {(userInput.trim() || busy) && (
-                <button
-                  onClick={handleSend}
-                  disabled={busy || !userInput.trim()}
-                  className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center transition-all hover:opacity-80 active:scale-90 disabled:opacity-20"
-                >
-                  {busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={20} strokeWidth={2.5} />}
-                </button>
+              {busy && (
+                <div className="flex justify-start gap-4 md:gap-6">
+                  <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center shrink-0">
+                    <Bot size={14} className="text-blue-600" />
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-2">
+                    <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" />
+                  </div>
+                </div>
               )}
             </div>
-          </div>
 
-          <p className="text-[11px] text-gray-400 text-center mt-3 font-medium">
-            By messaging Networkk, you agree to our Terms and have read our Privacy Policy.
-          </p>
+            <div className="border-t border-gray-100 bg-white px-6 pb-6 pt-4">
+              <div className="flex justify-center gap-8 mb-4">
+                <button
+                  onClick={resetAll}
+                  className="text-xs font-bold tracking-widest uppercase text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  Start Over
+                </button>
+              </div>
+
+              <div className="relative group bg-[#f4f4f5] rounded-[32px] transition-all focus-within:bg-white focus-within:ring-1 focus-within:ring-gray-200 focus-within:shadow-lg">
+                <textarea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder="Message networkk"
+                  className="w-full bg-transparent border-none rounded-[32px] px-8 py-5 pr-16 text-[15px] font-medium resize-none outline-none min-h-[64px] max-h-48 scrollbar-hide"
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                  }}
+                />
+
+                <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                  {(userInput.trim() || busy) && (
+                    <button
+                      onClick={handleSend}
+                      disabled={busy || !userInput.trim()}
+                      className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center transition-all hover:opacity-80 active:scale-90 disabled:opacity-20"
+                    >
+                      {busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={20} strokeWidth={2.5} />}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-gray-400 text-center mt-3 font-medium">
+                By messaging Networkk, you agree to our Terms and have read our Privacy Policy.
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
