@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
-import SiteHeader from "@/components/SiteHeader";
 
 import FreelancerSignupStep1 from "@/components/FreelancerSignupStep1";
 import FreelancerSignupStep2 from "@/components/FreelancerSignupStep2";
@@ -11,11 +10,13 @@ import FreelancerSignupStep3 from "@/components/FreelancerSignupStep3";
 
 function SignupReviewScreen() {
   return (
-    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-20">
-      <SiteHeader />
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-12">
       <main className="max-w-[1000px] mx-auto px-6 py-12 md:py-20 animate-fade-in">
         <div className="max-w-[540px] mx-auto text-center">
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-[28px] flex items-center justify-center mx-auto mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full bg-teal-50 text-[#10b8a6] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] mb-6">
+            Submission received
+          </div>
+          <div className="w-20 h-20 bg-teal-50 text-[#10b8a6] rounded-[28px] flex items-center justify-center mx-auto mb-8">
             <CheckCircle2 className="w-10 h-10" strokeWidth={1.5} />
           </div>
           <h1 className="text-4xl font-semibold tracking-tight text-black mb-6">
@@ -27,7 +28,7 @@ function SignupReviewScreen() {
           </p>
           <button
             onClick={() => window.location.href = "/"}
-            className="text-blue-600 hover:underline font-semibold text-lg"
+            className="text-[#10b8a6] hover:underline font-semibold text-lg"
           >
             Back to Home
           </button>

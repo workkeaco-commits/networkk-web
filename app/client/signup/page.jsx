@@ -75,14 +75,14 @@ export default function ClientSignupPage() {
                   onClick={() => setAccountType("company")}
                   className={`relative p-6 rounded-3xl border-2 transition-all text-left group ${
                     accountType === "company"
-                      ? "border-blue-600 bg-white"
+                      ? "border-[#10b8a6] bg-white"
                       : "border-gray-100 bg-gray-50/50 hover:border-gray-200"
                   }`}
                 >
                   <div
                     className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-colors ${
                       accountType === "company"
-                        ? "bg-blue-600 text-white"
+                        ? "bg-[#10b8a6] text-white"
                         : "bg-white text-gray-400"
                     }`}
                   >
@@ -92,7 +92,7 @@ export default function ClientSignupPage() {
                   <p className="text-xs text-gray-500 mt-1">Hiring for a business</p>
 
                   {accountType === "company" && (
-                    <div className="absolute top-4 right-4 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                    <div className="absolute top-4 right-4 w-5 h-5 bg-[#10b8a6] rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
                   )}
@@ -103,14 +103,14 @@ export default function ClientSignupPage() {
                   onClick={() => setAccountType("personal")}
                   className={`relative p-6 rounded-3xl border-2 transition-all text-left group ${
                     accountType === "personal"
-                      ? "border-blue-600 bg-white"
+                      ? "border-[#10b8a6] bg-white"
                       : "border-gray-100 bg-gray-50/50 hover:border-gray-200"
                   }`}
                 >
                   <div
                     className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 transition-colors ${
                       accountType === "personal"
-                        ? "bg-blue-600 text-white"
+                        ? "bg-[#10b8a6] text-white"
                         : "bg-white text-gray-400"
                     }`}
                   >
@@ -120,7 +120,7 @@ export default function ClientSignupPage() {
                   <p className="text-xs text-gray-500 mt-1">Individual projects</p>
 
                   {accountType === "personal" && (
-                    <div className="absolute top-4 right-4 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                    <div className="absolute top-4 right-4 w-5 h-5 bg-[#10b8a6] rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
                   )}
@@ -140,7 +140,7 @@ export default function ClientSignupPage() {
                     name="firstName"
                     type="text"
                     placeholder="Tameem"
-                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                   />
                 </div>
 
@@ -153,7 +153,7 @@ export default function ClientSignupPage() {
                     name="lastName"
                     type="text"
                     placeholder="Hussein"
-                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                   />
                 </div>
               </div>
@@ -169,7 +169,7 @@ export default function ClientSignupPage() {
                       name="companyName"
                       type="text"
                       placeholder="Networkk Inc."
-                      className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                      className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                     />
                   </div>
 
@@ -183,7 +183,7 @@ export default function ClientSignupPage() {
                         name="companyField"
                         type="text"
                         placeholder="Software"
-                        className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                        className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                       />
                     </div>
 
@@ -196,7 +196,7 @@ export default function ClientSignupPage() {
                         name="companyLocation"
                         type="text"
                         placeholder="Cairo"
-                        className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                        className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                       />
                     </div>
                   </div>
@@ -212,7 +212,7 @@ export default function ClientSignupPage() {
                   name="phone"
                   type="tel"
                   placeholder="01012345678"
-                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
 
@@ -225,7 +225,7 @@ export default function ClientSignupPage() {
                   name="email"
                   type="email"
                   placeholder="you@company.com"
-                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
 
@@ -238,7 +238,7 @@ export default function ClientSignupPage() {
                     id="password"
                     name="password"
                     type="password"
-                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all"
+                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                   />
                 </div>
 
@@ -250,7 +250,7 @@ export default function ClientSignupPage() {
                     id="passwordConfirm"
                     name="passwordConfirm"
                     type="password"
-                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all"
+                    className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -259,7 +259,7 @@ export default function ClientSignupPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[20px] py-4 text-[17px] shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#10b8a6] hover:bg-[#0e9f8e] text-white font-semibold rounded-[20px] py-4 text-[17px] shadow-lg shadow-[#10b8a6]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Creating..." : "Create client account"}
               {!submitting && (
@@ -272,7 +272,7 @@ export default function ClientSignupPage() {
 
             <p className="text-center text-sm text-gray-400">
               Already have an account?{" "}
-              <Link href="/client/sign-in" className="text-blue-600 hover:underline font-medium">
+              <Link href="/client/sign-in" className="text-[#10b8a6] hover:underline font-medium">
                 Sign in
               </Link>
             </p>

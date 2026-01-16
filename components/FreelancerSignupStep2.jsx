@@ -32,7 +32,7 @@ function SortableSkillItem({ id, onRemove }) {
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
+        <GripVertical className="h-4 w-4 text-gray-300 group-hover:text-[#10b8a6] transition-colors" />
         <span className="text-gray-900 font-medium">{id}</span>
       </div>
       <button
@@ -135,266 +135,262 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
   }
 
   return (
-    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen py-12 md:py-20 pb-20">
-      <main className="max-w-[720px] mx-auto px-6 animate-fade-in">
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Briefcase className="w-8 h-8" strokeWidth={1.5} />
-          </div>
-          <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
-            Step 2 of 3
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
-            Tell us about your work
-          </h1>
-          <p className="text-lg text-gray-500 font-medium leading-relaxed">
-            Highlight your expertise and showcase your best projects.
-          </p>
-        </div>
-
-        <form className="space-y-12" onSubmit={handleSubmit}>
-          {/* CORE INFO */}
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="jobTitle" className="text-[14px] font-semibold text-gray-900 ml-1">
-                Job title
-              </label>
-              <input
-                id="jobTitle"
-                name="jobTitle"
-                type="text"
-                placeholder="e.g. Machine Learning Engineer"
-                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300 shadow-sm"
-              />
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-12 pb-12">
+      <main className="max-w-[1000px] mx-auto px-6 py-12 md:py-16 animate-fade-in flex flex-col items-center">
+        <div className="w-full max-w-[720px] bg-white rounded-[40px] shadow-2xl shadow-gray-200/50 p-8 md:p-12 border border-white">
+          <div className="text-center mb-12">
+            <div className="w-16 h-16 bg-teal-50 text-[#10b8a6] rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Briefcase className="w-8 h-8" strokeWidth={1.5} />
             </div>
-
-            <div className="space-y-2">
-              <label htmlFor="bio" className="text-[14px] font-semibold text-gray-900 ml-1">
-                Bio
-              </label>
-              <textarea
-                id="bio"
-                name="bio"
-                rows={4}
-                placeholder="A short introduction about your professional journey…"
-                className="w-full bg-white border border-gray-200 rounded-[22px] px-5 py-4 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300 shadow-sm resize-none"
-              />
-            </div>
+            <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
+              Step 2 of 3
+            </p>
+            <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
+              Your professional profile
+            </h1>
+            <p className="text-lg text-gray-500 font-medium leading-relaxed">
+              Showcase your expertise and past work to attract high-quality clients.
+            </p>
           </div>
 
-          {/* SKILLS */}
-          <div className="space-y-6 pt-4 border-t border-gray-100">
-            <div>
-              <label className="text-[14px] font-semibold text-gray-900 ml-1 block mb-1">
-                Skills
-              </label>
-              <p className="text-sm text-gray-500 ml-1">
-                Start typing to see suggestions. Press Enter to add.
-              </p>
-            </div>
+          <div className="h-px bg-gray-100 w-full mb-12" />
 
-            <div className="relative space-y-4">
-              <div className="flex gap-2">
+          <form className="space-y-12" onSubmit={handleSubmit}>
+            {/* CORE INFO */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="jobTitle" className="text-[14px] font-semibold text-gray-900 ml-1">
+                  Job title
+                </label>
                 <input
-                  id="skillsInput"
+                  id="jobTitle"
+                  name="jobTitle"
                   type="text"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddSkill(skillInput);
-                    }
-                  }}
-                  placeholder="e.g. Python, React, UI Design"
-                  className="flex-1 rounded-[18px] border border-gray-200 bg-white px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all shadow-sm"
+                  placeholder="e.g. Machine Learning Engineer"
+                  required
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300 shadow-sm"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="bio" className="text-[14px] font-semibold text-gray-900 ml-1">
+                  Bio
+                </label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  rows={4}
+                  required
+                  placeholder="A short introduction about your professional journey…"
+                  className="w-full bg-white border border-gray-200 rounded-[22px] px-5 py-4 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300 shadow-sm resize-none"
+                />
+              </div>
+            </div>
+
+            {/* SKILLS */}
+            <div className="space-y-6 pt-4 border-t border-gray-100">
+              <div>
+                <label className="text-[14px] font-semibold text-gray-900 ml-1 block mb-1">
+                  Skills
+                </label>
+                <p className="text-sm text-gray-500 ml-1">
+                  Start typing to see suggestions. Drag to reorder.
+                </p>
+              </div>
+
+              <div className="relative space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    id="skillsInput"
+                    type="text"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddSkill(skillInput);
+                      }
+                    }}
+                    placeholder="e.g. Python, React, UI Design"
+                    className="flex-1 rounded-[18px] border border-gray-200 bg-white px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddSkill(skillInput)}
+                    className="bg-black text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors shadow-lg shadow-black/5"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {filteredSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-2xl border border-gray-100 bg-white/80 backdrop-blur-xl shadow-2xl p-2 animate-fade-in overflow-hidden">
+                    {filteredSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => handleAddSkill(s)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left rounded-xl hover:bg-white hover:text-[#10b8a6] transition-colors text-sm font-medium"
+                      >
+                        <span>{s}</span>
+                        <Plus className="w-4 h-4 opacity-30" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {skills.length > 0 ? (
+                  <div className="space-y-4 mt-8">
+                    <div className="flex items-center justify-between text-[11px] font-bold tracking-widest uppercase text-gray-400 px-1">
+                      <span>Ranked Skills</span>
+                      <span>Drag to reorder</span>
+                    </div>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={skills} strategy={verticalListSortingStrategy}>
+                        <div className="grid gap-3">
+                          {skills.map((skill) => (
+                            <SortableSkillItem key={skill} id={skill} onRemove={handleRemoveSkill} />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                ) : (
+                  <div className="py-12 border-2 border-dashed border-gray-100 rounded-[32px] text-center text-gray-400 font-medium">
+                    <p className="text-sm">No skills added yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* PROJECTS */}
+            <div className="space-y-6 pt-4 border-t border-gray-100 text-left">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-[14px] font-semibold text-gray-900 ml-1 block mb-1">
+                    Projects
+                  </label>
+                  <p className="text-sm text-gray-500 ml-1">
+                    Highlight your best work.
+                  </p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => handleAddSkill(skillInput)}
-                  className="bg-black text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors shadow-lg shadow-black/5"
+                  onClick={handleAddProject}
+                  className="text-[#10b8a6] hover:text-[#0e9f8e] font-semibold text-sm flex items-center gap-1.5 transition-colors"
                 >
-                  Add
+                  <Plus className="w-4 h-4" strokeWidth={2.5} /> Add another
                 </button>
               </div>
 
-              {(filteredSuggestions.length > 0 || skillInput.trim()) && (
-                <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-2xl border border-gray-100 bg-white/80 backdrop-blur-xl shadow-2xl p-2 animate-fade-in overflow-hidden">
-                  {filteredSuggestions.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => handleAddSkill(s)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left rounded-xl hover:bg-white hover:text-blue-600 transition-colors text-sm font-medium"
-                    >
-                      <span>{s}</span>
-                      <Plus className="w-4 h-4 opacity-30" />
-                    </button>
-                  ))}
-
-                  {!allSkills.map((x) => x.toLowerCase()).includes(skillInput.trim().toLowerCase()) &&
-                    skillInput.trim() && (
+              <div className="space-y-6">
+                {projects.map((pid, index) => (
+                  <div
+                    key={pid}
+                    className="rounded-[32px] border border-gray-100 bg-white p-8 space-y-6 shadow-sm relative group animate-fade-in"
+                  >
+                    {projects.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => handleAddSkill(skillInput)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left rounded-xl bg-blue-50 text-blue-600 text-sm font-medium hover:bg-blue-100 transition-colors"
+                        onClick={() => handleDeleteProject(pid)}
+                        className="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors"
                       >
-                        <span>Add “{skillInput.trim()}”</span>
-                        <Plus className="w-4 h-4" />
+                        <X className="w-5 h-5" />
                       </button>
                     )}
-                </div>
-              )}
 
-              {skills.length > 0 ? (
-                <div className="space-y-4 mt-8">
-                  <div className="flex items-center justify-between text-[11px] font-bold tracking-widest uppercase text-gray-400 px-1">
-                    <span>Ranked Skills</span>
-                    <span>Drag to reorder</span>
-                  </div>
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={skills} strategy={verticalListSortingStrategy}>
-                      <div className="grid gap-3">
-                        {skills.map((skill) => (
-                          <SortableSkillItem key={skill} id={skill} onRemove={handleRemoveSkill} />
-                        ))}
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold tracking-widest uppercase text-[#10b8a6]">
+                        Project {index + 1}
+                      </p>
+                      <input
+                        id={`projectName-${index}`}
+                        name={`projectName-${index}`}
+                        type="text"
+                        required
+                        placeholder="Project name (e.g. E-commerce Mobile App)"
+                        className="w-full text-2xl font-semibold bg-transparent placeholder:text-gray-200 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[13px] font-medium text-gray-500 ml-1">
+                          Start date
+                        </label>
+                        <input
+                          id={`startDate-${index}`}
+                          name={`startDate-${index}`}
+                          type="month"
+                          required
+                          max={todayMonth}
+                          className="w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none"
+                        />
                       </div>
-                    </SortableContext>
-                  </DndContext>
-                </div>
-              ) : (
-                <div className="py-12 border-2 border-dashed border-gray-100 rounded-[32px] text-center text-gray-400">
-                  <p className="text-sm">No skills added yet.</p>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* PROJECTS */}
-          <div className="space-y-6 pt-4 border-t border-gray-100 text-left">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-[14px] font-semibold text-gray-900 ml-1 block mb-1">
-                  Projects
-                </label>
-                <p className="text-sm text-gray-500 ml-1">
-                  Highlight 1–3 projects that represent your best work.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddProject}
-                className="text-blue-600 hover:text-blue-700 font-semibold text-sm flex items-center gap-1.5 transition-colors"
-              >
-                <Plus className="w-4 h-4" strokeWidth={2.5} /> Add another
-              </button>
-            </div>
+                      <div className="space-y-2">
+                        <label className="text-[13px] font-medium text-gray-500 ml-1 flex items-center justify-between">
+                          <span>End date</span>
+                          <div className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="w-3 h-3 rounded bg-gray-50 border-gray-200 text-[#10b8a6] focus:ring-0"
+                              checked={!!presentProjects[pid]}
+                              onChange={() => togglePresent(pid)}
+                            />
+                            <span className="text-[11px] text-gray-400">Present</span>
+                          </div>
+                        </label>
+                        <input
+                          id={`endDate-${index}`}
+                          name={`endDate-${index}`}
+                          type="month"
+                          max={todayMonth}
+                          disabled={!!presentProjects[pid]}
+                          className={`w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none transition-opacity ${presentProjects[pid] ? "opacity-30" : "opacity-100"
+                            }`}
+                        />
+                      </div>
+                    </div>
 
-            <div className="space-y-6">
-              {projects.map((pid, index) => (
-                <div
-                  key={pid}
-                  className="rounded-[32px] border border-gray-100 bg-white p-8 space-y-6 shadow-sm relative group animate-fade-in"
-                >
-                  {projects.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteProject(pid)}
-                      className="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-bold tracking-widest uppercase text-blue-600">
-                      Project {index + 1}
-                    </p>
-                    <input
-                      id={`projectName-${index}`}
-                      name={`projectName-${index}`}
-                      type="text"
-                      placeholder="Project name (e.g. E-commerce Mobile App)"
-                      className="w-full text-2xl font-semibold bg-transparent placeholder:text-gray-200 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[13px] font-medium text-gray-500 ml-1">
-                        Start date
+                        Summary
                       </label>
-                      <input
-                        id={`startDate-${index}`}
-                        name={`startDate-${index}`}
-                        type="month"
-                        max={todayMonth}
-                        className="w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-blue-600/10 outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[13px] font-medium text-gray-500 ml-1 flex items-center justify-between">
-                        <span>End date</span>
-                        <div className="flex items-center gap-1.5 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="w-3 h-3 rounded bg-gray-50 border-gray-200 text-blue-600 focus:ring-0"
-                            checked={!!presentProjects[pid]}
-                            onChange={() => togglePresent(pid)}
-                          />
-                          <span className="text-[11px] text-gray-400">Present</span>
-                        </div>
-                      </label>
-                      <input
-                        id={`endDate-${index}`}
-                        name={`endDate-${index}`}
-                        type="month"
-                        max={todayMonth}
-                        disabled={!!presentProjects[pid]}
-                        className={`w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-blue-600/10 outline-none transition-opacity ${
-                          presentProjects[pid] ? "opacity-30" : "opacity-100"
-                        }`}
+                      <textarea
+                        id={`projectSummary-${index}`}
+                        name={`projectSummary-${index}`}
+                        rows={3}
+                        required
+                        placeholder="What was your specific role and impact?"
+                        className="w-full bg-gray-50 border-none rounded-[20px] px-5 py-4 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none shadow-inner resize-none"
                       />
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-medium text-gray-500 ml-1">
-                      Summary
-                    </label>
-                    <textarea
-                      id={`projectSummary-${index}`}
-                      name={`projectSummary-${index}`}
-                      rows={3}
-                      placeholder="What was your specific role and impact?"
-                      className="w-full bg-gray-50 border-none rounded-[20px] px-5 py-4 text-sm focus:ring-2 focus:ring-blue-600/10 outline-none shadow-inner resize-none"
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* NAV BUTTONS */}
-          <div className="pt-8 flex items-center justify-between border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onBack}
-              className="text-lg font-medium text-gray-400 hover:text-black transition-colors"
-            >
-              Back
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full px-10 py-4 text-lg shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? "Processing..." : "Continue"}
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
-            </button>
-          </div>
-        </form>
+            {/* NAV BUTTONS */}
+            <div className="pt-8 flex items-center justify-between border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-lg font-medium text-gray-400 hover:text-black transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-[#10b8a6] hover:bg-[#0e9f8e] text-white font-semibold rounded-full px-10 py-4 text-lg shadow-lg shadow-[#10b8a6]/20 transition-all flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Processing..." : "Continue"}
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
+              </button>
+            </div>
+          </form>
+        </div>
       </main>
     </div>
   );

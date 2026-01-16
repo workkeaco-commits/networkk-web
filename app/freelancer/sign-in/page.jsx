@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/browser";
 
 export default function FreelancerSignInPage() {
@@ -71,83 +71,91 @@ export default function FreelancerSignInPage() {
   }
 
   return (
-    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen flex flex-col justify-center">
-      <main className="max-w-[480px] w-full mx-auto px-6 py-12 animate-fade-in">
-        <div className="text-center mb-10">
-          <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
-            Freelancer Portal
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
-            Welcome back
-          </h1>
-          <p className="text-lg text-gray-500 font-medium leading-relaxed">
-            Access your account to browse jobs and send proposals.
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-20">
+      <main className="max-w-[1000px] mx-auto px-6 py-12 md:py-16 animate-fade-in flex flex-col items-center">
+        <div className="w-full max-w-[540px] mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
+        </div>
+        <div className="w-full max-w-[540px] bg-white rounded-[40px] shadow-2xl shadow-gray-200/50 p-8 md:p-12 border border-white">
+          <div className="text-center mb-10">
+            <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
+              Freelancer Portal
+            </p>
+            <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
+              Welcome back
+            </h1>
+            <p className="text-lg text-gray-500 font-medium leading-relaxed">
+              Access your account to browse jobs and send proposals.
+            </p>
+          </div>
+
+          <div className="h-px bg-gray-100 w-full mb-12" />
+
+          {errorMsg && (
+            <div className="mb-6 rounded-2xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-red-600 animate-fade-in text-left">
+              {errorMsg}
+            </div>
+          )}
+
+          <form className="space-y-6 text-left" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-[13px] font-medium text-gray-500 ml-1">
+                Valid email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@freelancer.com"
+                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300 shadow-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-[13px] font-medium text-gray-500 ml-1">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300 shadow-sm"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#10b8a6] hover:bg-[#0e9f8e] text-white font-semibold rounded-[20px] py-4 text-[17px] shadow-lg shadow-[#10b8a6]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Signing in..." : "Log in as freelancer"}
+              {!loading && (
+                <ChevronRight
+                  className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                  strokeWidth={2.5}
+                />
+              )}
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-sm text-gray-400">
+            Don’t have a freelancer account?{" "}
+            <Link href="/freelancer/signup" className="text-[#10b8a6] hover:underline font-medium">
+              Sign up as a freelancer
+            </Link>
           </p>
         </div>
-
-        {errorMsg && (
-          <div className="mb-6 rounded-2xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-red-600 animate-fade-in">
-            {errorMsg}
-          </div>
-        )}
-
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-[13px] font-medium text-gray-500 ml-1">
-              Valid email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@freelancer.com"
-              className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-[13px] font-medium text-gray-500 ml-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
-            />
-          </div>
-          <div className="text-right">
-            <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline font-medium">
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black hover:bg-gray-900 text-white font-semibold rounded-[20px] py-4 text-[17px] shadow-lg shadow-black/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Signing in..." : "Log in as freelancer"}
-            {!loading && (
-              <ChevronRight
-                className="w-5 h-5 group-hover:translate-x-1 transition-transform"
-                strokeWidth={2.5}
-              />
-            )}
-          </button>
-        </form>
-
-        <p className="mt-8 text-center text-sm text-gray-400">
-          Don’t have a freelancer account?{" "}
-          <Link href="/freelancer/signup" className="text-black hover:underline font-medium">
-            Sign up as a freelancer
-          </Link>
-        </p>
       </main>
     </div>
   );

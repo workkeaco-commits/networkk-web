@@ -29,24 +29,29 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
   }
 
   return (
-    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen py-12 md:py-20">
-      <main className="max-w-[1000px] mx-auto px-6 animate-fade-in text-center">
-        <div className="max-w-[480px] mx-auto">
+    <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased min-h-screen pt-12">
+      <main className="max-w-[1000px] mx-auto px-6 py-12 md:py-16 animate-fade-in flex flex-col items-center">
+        <div className="w-full max-w-[540px] bg-white rounded-[40px] shadow-2xl shadow-gray-200/50 p-8 md:p-12 border border-white">
           {/* Header */}
-          <div className="mb-12">
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <div className="mb-12 text-center">
+            <div className="w-16 h-16 bg-teal-50 text-[#10b8a6] rounded-2xl flex items-center justify-center mx-auto mb-6">
               <Sparkles className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
               Step 1 of 3
             </p>
             <h1 className="text-4xl font-semibold tracking-tight text-black mb-4">
-              Join the Networkk community
+              Build your future{" "}
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#10b8a6] to-[#34d399]">
+                here
+              </span>
             </h1>
             <p className="text-lg text-gray-500 font-medium leading-relaxed">
               Start with your basic info. You&apos;ll add your skills and profile details next.
             </p>
           </div>
+
+          <div className="h-px bg-gray-100 w-full mb-12" />
 
           {err && (
             <div className="mb-6 rounded-2xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-red-600 animate-fade-in text-left">
@@ -65,7 +70,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   name="firstName"
                   type="text"
                   placeholder="Tameem"
-                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
               <div className="space-y-2">
@@ -77,7 +82,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   name="lastName"
                   type="text"
                   placeholder="Hussein"
-                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
             </div>
@@ -91,7 +96,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                 name="phone"
                 type="tel"
                 placeholder="01012345678"
-                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
               />
             </div>
 
@@ -104,7 +109,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                 name="email"
                 type="email"
                 placeholder="you@example.com"
-                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300"
+                className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
               />
             </div>
 
@@ -117,18 +122,21 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   id="password"
                   name="password"
                   type="password"
-                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all"
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="passwordConfirm" className="text-[13px] font-medium text-gray-500 ml-1">
+                <label
+                  htmlFor="passwordConfirm"
+                  className="text-[13px] font-medium text-gray-500 ml-1"
+                >
                   Confirm
                 </label>
                 <input
                   id="passwordConfirm"
                   name="passwordConfirm"
                   type="password"
-                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all"
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                 />
               </div>
             </div>
@@ -138,11 +146,14 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[20px] py-3.5 text-sm shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-[#10b8a6] hover:bg-[#0e9f8e] text-white font-semibold rounded-[20px] py-3.5 text-sm shadow-lg shadow-[#10b8a6]/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? "Next..." : "Next"}
                 {!submitting && (
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
+                  <ChevronRight
+                    className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                    strokeWidth={2.5}
+                  />
                 )}
               </button>
             </div>
