@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = siteUrl.replace(/\\/$/, "");
+  const base = siteUrl.endsWith("/") ? siteUrl.slice(0, -1) : siteUrl;
   const routes = [
     "",
     "/client/signup",

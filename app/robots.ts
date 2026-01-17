@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
+  const base = siteUrl.endsWith("/") ? siteUrl.slice(0, -1) : siteUrl;
   return {
     rules: [
       {
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: `${siteUrl.replace(/\\/$/, "")}/sitemap.xml`,
+    sitemap: `${base}/sitemap.xml`,
   };
 }
