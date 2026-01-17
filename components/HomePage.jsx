@@ -17,40 +17,59 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase/browser";
 import DashboardMockup from "./DashboardMockup";
 
 export default function HomePage() {
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
-
-  const freelancers = [
-    {
-      name: "Amira Hassan",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&h=800&fit=crop",
-      location: "Cairo",
-      role: "Product Designer",
-    },
-    {
-      name: "Omar Khalil",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop",
-      location: "Alexandria",
-      role: "Full Stack Engineer",
-    },
-    {
-      name: "Layla Ahmed",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=800&h=800&fit=crop",
-      location: "Giza",
-      role: "SEO Specialist",
-    },
-  ];
+  const [communityAvatars, setCommunityAvatars] = useState([]);
+  const [showcaseFreelancers, setShowcaseFreelancers] = useState([]);
 
   /* Auto-scroll carousel */
   useEffect(() => {
+    if (!showcaseFreelancers.length) return undefined;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % freelancers.length);
+      setCurrentSlide((prev) => (prev + 1) % showcaseFreelancers.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, [freelancers.length]);
+  }, [showcaseFreelancers.length]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadShowcaseFreelancers() {
+      const { data, error } = await supabase
+        .from("freelancers")
+        .select("freelancer_id, first_name, last_name, job_title, personal_img_url")
+        .not("personal_img_url", "is", null)
+        .limit(8);
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error("Failed to load freelancers:", error);
+        return;
+      }
+
+      const normalized = (data || []).map((row) => ({
+        id: row.freelancer_id,
+        name:
+          [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || "Freelancer",
+        role: row.job_title || "Freelancer",
+        image: row.personal_img_url,
+      }));
+
+      setShowcaseFreelancers(normalized);
+      setCommunityAvatars(normalized.map((row) => row.image).filter(Boolean).slice(0, 3));
+    }
+
+    loadShowcaseFreelancers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="bg-[#fbfbfd] text-[#1d1d1f] antialiased overflow-x-hidden">
@@ -61,9 +80,9 @@ export default function HomePage() {
             <Image
               src="/logo-sf-display.png"
               alt="Networkk"
-              width={220}
-              height={60}
-              className="h-12 w-auto object-contain"
+              width={176}
+              height={48}
+              className="h-[38.4px] w-auto object-contain"
               priority
             />
           </Link>
@@ -71,7 +90,8 @@ export default function HomePage() {
           <nav className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-8 text-[12px] font-medium tracking-wide text-gray-800">
             <Link href="/freelancer/signup" className="hover:text-[#10b8a6] transition-colors">Talent</Link>
             <Link href="#how-it-works" className="hover:text-[#10b8a6] transition-colors">How it Works</Link>
-            <Link href="#" className="hover:text-[#10b8a6] transition-colors">Stories</Link>
+            <Link href="#our-story" className="hover:text-[#10b8a6] transition-colors">Our Story</Link>
+            <Link href="/blog" className="hover:text-[#10b8a6] transition-colors">Blog</Link>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -132,7 +152,7 @@ export default function HomePage() {
       </section>
 
       {/* Story Section - Large Typography */}
-      <section className="py-24 md:py-32 bg-white">
+      <section id="our-story" className="py-24 md:py-32 bg-white">
         <div className="max-w-[980px] mx-auto px-6">
           <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-8">Our Story</p>
           <div className="grid md:grid-cols-2 gap-16 md:gap-24 items-start">
@@ -145,7 +165,7 @@ export default function HomePage() {
             </div>
             <div>
               <p className="text-xl text-gray-600 leading-relaxed font-medium">
-                We built Networkk by listening to freelancers. We created a space where talented people are valued, payments are protected, and collaboration is seamless.
+                We built Networkk for clients who need outcomes, not overhead. Find trusted specialists, protect your budget with clear milestones, and keep delivery smooth from kickoff to handoff.
               </p>
             </div>
           </div>
@@ -188,8 +208,21 @@ export default function HomePage() {
                 <h3 className="text-3xl font-bold mb-4">Top Talent.</h3>
               </div>
               <div className="mt-8 flex -space-x-4 justify-center">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="w-12 h-12 rounded-full border-2 border-white bg-gray-200"></div>
+                {[...communityAvatars, null, null, null].slice(0, 3).map((url, index) => (
+                  <div
+                    key={`${url || "placeholder"}-${index}`}
+                    className="w-12 h-12 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
+                  >
+                    {url ? (
+                      <Image
+                        src={url}
+                        alt="Freelancer profile"
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : null}
+                  </div>
                 ))}
               </div>
             </div>
@@ -307,14 +340,13 @@ export default function HomePage() {
           </div>
 
           <div className="flex gap-6 overflow-x-auto no-scrollbar pb-8">
-            {freelancers.map((f, i) => (
-              <div key={i} className="min-w-[300px] md:min-w-[360px] bg-white rounded-[24px] shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+            {showcaseFreelancers.map((f) => (
+              <div key={f.id} className="min-w-[300px] md:min-w-[360px] bg-white rounded-[24px] shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
                 <div className="h-[280px] relative">
                   <Image src={f.image} alt={f.name} fill className="object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   <div className="absolute bottom-6 left-6 text-white">
                     <h3 className="text-xl font-semibold">{f.name}</h3>
-                    <p className="text-sm opacity-90">{f.location}</p>
                   </div>
                 </div>
                 <div className="p-6">

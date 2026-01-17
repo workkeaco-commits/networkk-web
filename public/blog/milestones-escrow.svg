@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" fill="none">
+  <rect width="1200" height="675" rx="48" fill="#0b1220" />
+  <rect x="50" y="50" width="1100" height="575" rx="40" fill="url(#gradient)" />
+  <rect x="130" y="440" width="220" height="110" rx="26" fill="#ffffff" fill-opacity="0.9" />
+  <rect x="390" y="360" width="220" height="110" rx="26" fill="#ffffff" fill-opacity="0.85" />
+  <rect x="650" y="280" width="220" height="110" rx="26" fill="#ffffff" fill-opacity="0.8" />
+  <rect x="910" y="200" width="170" height="110" rx="26" fill="#ffffff" fill-opacity="0.75" />
+  <path d="M210 440v-50h100" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
+  <path d="M470 360v-50h100" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
+  <path d="M730 280v-50h100" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
+  <path d="M960 200v-50h80" stroke="#0f172a" stroke-width="10" stroke-linecap="round" />
+  <circle cx="250" cy="495" r="26" fill="#10b8a6" />
+  <circle cx="510" cy="415" r="26" fill="#22c55e" />
+  <circle cx="770" cy="335" r="26" fill="#38bdf8" />
+  <path d="M860 160c20-18 50-18 70 0 16 14 22 37 14 57-10 25-37 41-49 62-12-21-39-37-49-62-8-20-2-43 14-57z" fill="#10b8a6" />
+  <defs>
+    <linearGradient id="gradient" x1="50" y1="50" x2="1150" y2="625" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a7f3d0" />
+      <stop offset="0.55" stop-color="#38bdf8" />
+      <stop offset="1" stop-color="#0ea5e9" />
+    </linearGradient>
+  </defs>
+</svg>
