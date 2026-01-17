@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/browser";
 
-export default function FreelancerSignInPage() {
+function FreelancerSignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/jobs";
@@ -158,5 +158,13 @@ export default function FreelancerSignInPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function FreelancerSignInPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
+      <FreelancerSignInContent />
+    </Suspense>
   );
 }

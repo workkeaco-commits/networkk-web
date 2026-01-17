@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent, KeyboardEvent, useRef, useCallback, useMemo } from "react";
+import { Suspense, useEffect, useState, FormEvent, KeyboardEvent, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import { Send, FileText, Loader2 } from "lucide-react";
@@ -388,6 +388,14 @@ function OfferInlineModal({
   );
 }
 
+export default function FreelancerMessagesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
+      <FreelancerMessagesContent />
+    </Suspense>
+  );
+}
+
 /* ---------------- Offer Viewer (Freelancer) ---------------- */
 type ProposalLite = {
   proposal_id: number;
@@ -736,7 +744,7 @@ function FreelancerOfferViewerModal({
 }
 
 /* ---------------- Main Page ---------------- */
-export default function FreelancerMessagesPage() {
+function FreelancerMessagesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialConvId = searchParams.get("conversation_id");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent, KeyboardEvent, useRef, useCallback, useMemo } from "react";
+import { Suspense, useEffect, useState, FormEvent, KeyboardEvent, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import { Send, FileText, Loader2 } from "lucide-react";
@@ -370,6 +370,14 @@ function OfferInlineModal({
   );
 }
 
+export default function ClientMessagesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#fbfbfd]" />}>
+      <ClientMessagesContent />
+    </Suspense>
+  );
+}
+
 /* --------------- Offer Viewer Modal (client) --------------- */
 type ProposalLite = {
   proposal_id: number;
@@ -704,7 +712,7 @@ function ClientOfferViewerModal({
 }
 
 /* ---------------- Main Page ---------------- */
-export default function ClientMessagesPage() {
+function ClientMessagesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialConvId = searchParams.get("conversation_id");
