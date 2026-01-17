@@ -1,22 +1,38 @@
-"use client";
+import type { Metadata } from "next";
+import { defaultOgImage, siteName } from "@/lib/seo";
 
-import { Suspense } from "react";
-import type { ReactNode } from "react";
+export const metadata: Metadata = {
+  title: "Client sign in",
+  description:
+    "Sign in to your client account to manage jobs, proposals, and payments.",
+  keywords: ["client sign in", "client login", "Networkk"],
+  alternates: { canonical: "/client/sign-in" },
+  openGraph: {
+    title: "Client sign in",
+    description:
+      "Sign in to your client account to manage jobs, proposals, and payments.",
+    type: "website",
+    siteName,
+    url: "/client/sign-in",
+    images: [{ url: defaultOgImage, alt: "Networkk" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Client sign in",
+    description:
+      "Sign in to your client account to manage jobs, proposals, and payments.",
+    images: [defaultOgImage],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function ClientSignInLayout({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
-          Loading sign-in…
-        </div>
-      }
-    >
-      {children}
-    </Suspense>
-  );
+  return children;
 }

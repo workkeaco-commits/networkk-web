@@ -1,47 +1,179 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { GripVertical, Plus, Briefcase, ChevronRight, X } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useEffect, useRef, useState } from "react";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Briefcase, X } from "lucide-react";
 
-function SortableSkillItem({ id, onRemove }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+const SKILL_SUGGESTIONS = [
+  "Python",
+  "Machine Learning",
+  "Deep Learning",
+  "Computer Vision",
+  "Data Engineering",
+  "React",
+  "Node.js",
+  "SQL",
+  "Pandas",
+  "Docker",
+];
+
+const MONTHS = [
+  { label: "Jan", value: 1 },
+  { label: "Feb", value: 2 },
+  { label: "Mar", value: 3 },
+  { label: "Apr", value: 4 },
+  { label: "May", value: 5 },
+  { label: "Jun", value: 6 },
+  { label: "Jul", value: 7 },
+  { label: "Aug", value: 8 },
+  { label: "Sep", value: 9 },
+  { label: "Oct", value: 10 },
+  { label: "Nov", value: 11 },
+  { label: "Dec", value: 12 },
+];
+
+function formatMonthValue(year, month) {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function parseMonthValue(value) {
+  if (!value || typeof value !== "string") return null;
+  const [y, m] = value.split("-");
+  const year = Number(y);
+  const month = Number(m);
+  if (!year || !month) return null;
+  return { year, month };
+}
+
+function MonthPicker({
+  name,
+  value,
+  onChange,
+  min,
+  max,
+  placeholder = "Select month",
+  disabled = false,
+}) {
+  const wrapperRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(new Date().getFullYear());
+
+  const parsedMin = parseMonthValue(min);
+  const parsedMax = parseMonthValue(max);
+  const currentYear = new Date().getFullYear();
+  const minYear = parsedMin ? parsedMin.year : currentYear - 50;
+  const maxYear = parsedMax ? parsedMax.year : currentYear + 10;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  useEffect(() => {
+    const parsedValue = parseMonthValue(value);
+    if (parsedValue?.year) {
+      setViewYear(parsedValue.year);
+      return;
+    }
+    if (parsedMin?.year) {
+      setViewYear(parsedMin.year);
+      return;
+    }
+    if (parsedMax?.year) {
+      setViewYear(parsedMax.year);
+      return;
+    }
+    setViewYear(currentYear);
+  }, [value, min, max, currentYear, parsedMin?.year, parsedMax?.year]);
+
+  const canPrev = viewYear > minYear;
+  const canNext = viewYear < maxYear;
+
+  function isDisabled(year, month) {
+    const candidate = formatMonthValue(year, month);
+    if (min && candidate < min) return true;
+    if (max && candidate > max) return true;
+    return false;
+  }
+
+  function handleSelect(month) {
+    if (disabled) return;
+    const next = formatMonthValue(viewYear, month);
+    if (isDisabled(viewYear, month)) return;
+    onChange(next);
+    setOpen(false);
+  }
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm shadow-sm animate-fade-in group"
-    >
-      <div
-        className="flex items-center gap-3 cursor-grab active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4 text-gray-300 group-hover:text-[#10b8a6] transition-colors" />
-        <span className="text-gray-900 font-medium">{id}</span>
-      </div>
+    <div ref={wrapperRef} className="relative">
+      <input type="hidden" name={name} value={value || ""} />
       <button
         type="button"
-        onClick={() => onRemove(id)}
-        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+        onClick={() => !disabled && setOpen((prev) => !prev)}
+        className={`w-full border border-gray-200 rounded-[14px] px-4 py-3 text-sm flex items-center gap-3 transition-colors ${disabled ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-gray-700 hover:border-gray-300"
+          }`}
       >
-        <X className="w-4 h-4" />
+        <Calendar className="h-4 w-4 text-gray-400" />
+        <span className={value ? "text-gray-700" : "text-gray-400"}>
+          {value || placeholder}
+        </span>
       </button>
+
+      {open && !disabled && (
+        <div className="absolute z-20 mt-2 w-full rounded-2xl border border-gray-100 bg-white shadow-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={() => canPrev && setViewYear((y) => y - 1)}
+              disabled={!canPrev}
+              className={`rounded-full p-2 transition-colors ${canPrev ? "text-gray-600 hover:bg-gray-100" : "text-gray-300 cursor-not-allowed"
+                }`}
+              aria-label="Previous year"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-semibold text-gray-700">{viewYear}</span>
+            <button
+              type="button"
+              onClick={() => canNext && setViewYear((y) => y + 1)}
+              disabled={!canNext}
+              className={`rounded-full p-2 transition-colors ${canNext ? "text-gray-600 hover:bg-gray-100" : "text-gray-300 cursor-not-allowed"
+                }`}
+              aria-label="Next year"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {MONTHS.map((month) => {
+              const monthValue = formatMonthValue(viewYear, month.value);
+              const isSelected = value === monthValue;
+              const disabledMonth = isDisabled(viewYear, month.value);
+              return (
+                <button
+                  key={month.value}
+                  type="button"
+                  onClick={() => handleSelect(month.value)}
+                  disabled={disabledMonth}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${disabledMonth
+                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    : isSelected
+                      ? "bg-[#10b8a6] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                >
+                  {month.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -51,41 +183,24 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
 
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
-  const [allSkills, setAllSkills] = useState([]);
   const [projects, setProjects] = useState([0]);
   const [presentProjects, setPresentProjects] = useState({});
-
-  const sensors = useSensors(useSensor(PointerSensor));
-
-  useEffect(() => {
-    setAllSkills([
-      "Python",
-      "Machine Learning",
-      "Deep Learning",
-      "Computer Vision",
-      "Data Engineering",
-      "React",
-      "Node.js",
-      "SQL",
-      "Pandas",
-      "Docker",
-    ]);
-  }, []);
-
-  const filteredSuggestions = allSkills
-    .filter(
-      (s) =>
-        skillInput &&
-        s.toLowerCase().includes(skillInput.toLowerCase()) &&
-        !skills.includes(s)
-    )
-    .slice(0, 6);
+  const [startDates, setStartDates] = useState({});
+  const [endDates, setEndDates] = useState({});
 
   function handleAddSkill(name) {
-    const clean = name.trim();
-    if (!clean) return;
-    if (skills.includes(clean)) return setSkillInput("");
-    setSkills((prev) => [...prev, clean]);
+    const parts = name
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+    setSkills((prev) => {
+      const next = [...prev];
+      parts.forEach((part) => {
+        if (!next.includes(part)) next.push(part);
+      });
+      return next;
+    });
     setSkillInput("");
   }
 
@@ -93,11 +208,14 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
     setSkills((prev) => prev.filter((s) => s !== name));
   }
 
-  function handleDragEnd(event) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setSkills((prev) => arrayMove(prev, prev.indexOf(active.id), prev.indexOf(over.id)));
-  }
+  const filteredSuggestions = SKILL_SUGGESTIONS
+    .filter(
+      (s) =>
+        skillInput &&
+        s.toLowerCase().includes(skillInput.toLowerCase()) &&
+        !skills.includes(s)
+    )
+    .slice(0, 6);
 
   function handleAddProject() {
     setProjects((prev) => {
@@ -108,10 +226,34 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
 
   function handleDeleteProject(id) {
     setProjects((prev) => prev.filter((p) => p !== id));
+    setPresentProjects((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setStartDates((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setEndDates((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }
 
   function togglePresent(id) {
-    setPresentProjects((prev) => ({ ...prev, [id]: !prev[id] }));
+    setPresentProjects((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      if (next[id]) {
+        setEndDates((endPrev) => ({ ...endPrev, [id]: "" }));
+      }
+      return next;
+    });
   }
 
   function handleSubmit(e) {
@@ -120,16 +262,38 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
     const jobTitle = (fd.get("jobTitle") || "").toString().trim();
     const bio = (fd.get("bio") || "").toString().trim();
 
-    const proj = projects
-      .map((pid, index) => ({
+    const projRows = projects.map((pid, index) => {
+      const start = startDates[pid] || "";
+      const end = presentProjects[pid] ? "" : (endDates[pid] || "");
+      return {
         name: (fd.get(`projectName-${index}`) || "").toString().trim(),
-        start: (fd.get(`startDate-${index}`) || "").toString() || null,
-        end: presentProjects[pid]
-          ? null
-          : (fd.get(`endDate-${index}`) || "").toString() || null,
+        start: start || null,
+        end: presentProjects[pid] ? null : end || null,
         summary: (fd.get(`projectSummary-${index}`) || "").toString().trim(),
-      }))
-      .filter((p) => p.name || p.summary || p.start || p.end);
+      };
+    });
+
+    const missingDates = projects.some((pid) => {
+      const start = startDates[pid] || "";
+      const end = endDates[pid] || "";
+      if (!start) return true;
+      if (!presentProjects[pid] && !end) return true;
+      return false;
+    });
+    if (missingDates) {
+      alert("Please select start and end dates for each project.");
+      return;
+    }
+
+    const invalidDates = projRows.some(
+      (p) => p.start && p.end && p.end < p.start
+    );
+    if (invalidDates) {
+      alert("End date must be the same as or after the start date.");
+      return;
+    }
+
+    const proj = projRows.filter((p) => p.name || p.summary || p.start || p.end);
 
     onNext({ jobTitle, bio, skills, projects: proj });
   }
@@ -194,11 +358,11 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                   Skills
                 </label>
                 <p className="text-sm text-gray-500 ml-1">
-                  Start typing to see suggestions. Drag to reorder.
+                  Type skills and press Enter or comma to add.
                 </p>
               </div>
 
-              <div className="relative space-y-4">
+              <div className="space-y-4">
                 <div className="flex gap-2">
                   <input
                     id="skillsInput"
@@ -206,7 +370,7 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === "Enter" || e.key === ",") {
                         e.preventDefault();
                         handleAddSkill(skillInput);
                       }
@@ -224,7 +388,7 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                 </div>
 
                 {filteredSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 z-20 rounded-2xl border border-gray-100 bg-white/80 backdrop-blur-xl shadow-2xl p-2 animate-fade-in overflow-hidden">
+                  <div className="rounded-2xl border border-gray-100 bg-white/80 backdrop-blur-xl shadow-2xl p-2 animate-fade-in overflow-hidden">
                     {filteredSuggestions.map((s) => (
                       <button
                         key={s}
@@ -240,20 +404,23 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                 )}
 
                 {skills.length > 0 ? (
-                  <div className="space-y-4 mt-8">
-                    <div className="flex items-center justify-between text-[11px] font-bold tracking-widest uppercase text-gray-400 px-1">
-                      <span>Ranked Skills</span>
-                      <span>Drag to reorder</span>
-                    </div>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                      <SortableContext items={skills} strategy={verticalListSortingStrategy}>
-                        <div className="grid gap-3">
-                          {skills.map((skill) => (
-                            <SortableSkillItem key={skill} id={skill} onRemove={handleRemoveSkill} />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 animate-fade-in"
+                      >
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(skill)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          aria-label={`Remove ${skill}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
                 ) : (
                   <div className="py-12 border-2 border-dashed border-gray-100 rounded-[32px] text-center text-gray-400 font-medium">
@@ -287,44 +454,60 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                 {projects.map((pid, index) => (
                   <div
                     key={pid}
-                    className="rounded-[32px] border border-gray-100 bg-white p-8 space-y-6 shadow-sm relative group animate-fade-in"
+                    className="rounded-2xl border border-gray-100 bg-white p-6 space-y-5 animate-fade-in"
                   >
-                    {projects.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteProject(pid)}
-                        className="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-bold tracking-widest uppercase text-[#10b8a6]">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400">
                         Project {index + 1}
                       </p>
+                      {projects.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProject(pid)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          aria-label={`Remove project ${index + 1}`}
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label
+                        htmlFor={`projectName-${index}`}
+                        className="text-[13px] font-medium text-gray-500 ml-1"
+                      >
+                        Project name
+                      </label>
                       <input
                         id={`projectName-${index}`}
                         name={`projectName-${index}`}
                         type="text"
                         required
-                        placeholder="Project name (e.g. E-commerce Mobile App)"
-                        className="w-full text-2xl font-semibold bg-transparent placeholder:text-gray-200 focus:outline-none"
+                        placeholder="e.g. E-commerce Mobile App"
+                        className="w-full bg-white border border-gray-200 rounded-[16px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[13px] font-medium text-gray-500 ml-1">
                           Start date
                         </label>
-                        <input
-                          id={`startDate-${index}`}
+                        <MonthPicker
                           name={`startDate-${index}`}
-                          type="month"
-                          required
+                          value={startDates[pid] || ""}
                           max={todayMonth}
-                          className="w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none"
+                          placeholder="Select month"
+                          onChange={(next) => {
+                            setStartDates((prev) => ({ ...prev, [pid]: next }));
+                            setEndDates((prev) => {
+                              if (prev[pid] && prev[pid] < next) {
+                                return { ...prev, [pid]: "" };
+                              }
+                              return prev;
+                            });
+                          }}
                         />
                       </div>
 
@@ -341,14 +524,14 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                             <span className="text-[11px] text-gray-400">Present</span>
                           </div>
                         </label>
-                        <input
-                          id={`endDate-${index}`}
+                        <MonthPicker
                           name={`endDate-${index}`}
-                          type="month"
+                          value={endDates[pid] || ""}
+                          min={startDates[pid] || ""}
                           max={todayMonth}
-                          disabled={!!presentProjects[pid]}
-                          className={`w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none transition-opacity ${presentProjects[pid] ? "opacity-30" : "opacity-100"
-                            }`}
+                          placeholder={startDates[pid] ? "Select month" : "Pick start date first"}
+                          disabled={!!presentProjects[pid] || !startDates[pid]}
+                          onChange={(next) => setEndDates((prev) => ({ ...prev, [pid]: next }))}
                         />
                       </div>
                     </div>
@@ -363,7 +546,7 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                         rows={3}
                         required
                         placeholder="What was your specific role and impact?"
-                        className="w-full bg-gray-50 border-none rounded-[20px] px-5 py-4 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none shadow-inner resize-none"
+                        className="w-full bg-white border border-gray-200 rounded-[18px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none resize-none"
                       />
                     </div>
                   </div>

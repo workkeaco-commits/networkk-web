@@ -13,6 +13,10 @@ export async function POST(req: Request) {
     const profileFile = form.get('profileImage') as File | null;
     const nationalIdFile = form.get('nationalIdImage') as File | null;
 
+    if (!profileFile || !nationalIdFile) {
+      return NextResponse.json({ error: { message: 'Profile photo and national ID are required' } }, { status: 400 });
+    }
+
     console.log('[signup] received payload keys:', Object.keys(payload));
     console.log('[signup] files:', {
       profile: !!profileFile && `${profileFile.name} (${profileFile.size}B)`,

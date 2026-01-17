@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { GraduationCap, BookOpen, Plus, X, Camera, ShieldCheck, ChevronRight, UploadCloud } from "lucide-react";
+import ImageCropperModal from "@/components/ImageCropperModal";
 
 export default function FreelancerSignupStep3({ onBack, onNext, submitting = false }) {
   const [eduStatus, setEduStatus] = useState("graduated"); // "graduated" | "student" | "none"
   const [certs, setCerts] = useState([0]);
   const [profilePreview, setProfilePreview] = useState(null);
   const [idPreview, setIdPreview] = useState(null);
+  const [profileFile, setProfileFile] = useState(null);
+  const [nationalIdFile, setNationalIdFile] = useState(null);
+  const [activeCrop, setActiveCrop] = useState(null);
+  const [fileError, setFileError] = useState("");
+
+  const profileInputRef = useRef(null);
+  const idInputRef = useRef(null);
 
   function handleAddCert() {
     setCerts((prev) => [...prev, prev.length ? Math.max(...prev) + 1 : 0]);
@@ -19,13 +27,59 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
   function handleFileChange(e, type) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    if (type === "profile") setProfilePreview(url);
-    if (type === "id") setIdPreview(url);
+    setFileError("");
+    if (type === "id") {
+      const url = URL.createObjectURL(file);
+      if (idPreview) URL.revokeObjectURL(idPreview);
+      setIdPreview(url);
+      setNationalIdFile(file);
+      e.target.value = "";
+      return;
+    }
+    setActiveCrop({ type, file });
+    e.target.value = "";
+  }
+
+  function handleCropConfirm(croppedFile) {
+    const url = URL.createObjectURL(croppedFile);
+    if (activeCrop?.type === "profile") {
+      if (profilePreview) URL.revokeObjectURL(profilePreview);
+      setProfilePreview(url);
+      setProfileFile(croppedFile);
+    }
+    if (activeCrop?.type === "id") {
+      if (idPreview) URL.revokeObjectURL(idPreview);
+      setIdPreview(url);
+      setNationalIdFile(croppedFile);
+    }
+    setFileError("");
+    setActiveCrop(null);
+  }
+
+  function handleCropCancel() {
+    setActiveCrop(null);
+  }
+
+  function handleRemoveProfile() {
+    if (profilePreview) URL.revokeObjectURL(profilePreview);
+    setProfilePreview(null);
+    setProfileFile(null);
+    if (profileInputRef.current) profileInputRef.current.value = "";
+  }
+
+  function handleRemoveId() {
+    if (idPreview) URL.revokeObjectURL(idPreview);
+    setIdPreview(null);
+    setNationalIdFile(null);
+    if (idInputRef.current) idInputRef.current.value = "";
   }
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (!profileFile || !nationalIdFile) {
+      setFileError("Profile photo and national ID scan are required.");
+      return;
+    }
     const fd = new FormData(e.currentTarget);
 
     const education = {
@@ -41,10 +95,7 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
       year: (fd.get(`certYear-${index}`) || "").toString().trim(),
     })).filter(c => c.name || c.org);
 
-    const profileImage = fd.get("profileImage");
-    const nationalIdImage = fd.get("nationalIdImage");
-
-    onNext({ education, certificates: certList, profileImage, nationalIdImage });
+    onNext({ education, certificates: certList, profileImage: profileFile, nationalIdImage: nationalIdFile });
   }
 
   return (
@@ -172,22 +223,35 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
             </div>
 
             {/* UPLOADS SECTION */}
-            <div className="space-y-8 pt-4 border-t border-gray-100 text-left">
+            <div className="space-y-6 pt-4 border-t border-gray-100 text-left">
+              {fileError && (
+                <div className="rounded-2xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-red-600 animate-fade-in">
+                  {fileError}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Profile Photo */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-1">
                     <Camera className="w-4 h-4 text-gray-400" />
                     <label className="text-[14px] font-semibold text-gray-900">Profile Photo</label>
+                    <span className="text-[11px] font-semibold text-gray-400">Required</span>
                   </div>
                   <div className="relative group">
                     <input
-                      type="file" accept="image/*" name="profileImage"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      ref={profileInputRef}
+                      id="profileImage"
+                      type="file"
+                      accept="image/*"
+                      name="profileImage"
+                      className="sr-only"
                       onChange={(e) => handleFileChange(e, "profile")}
                     />
-                    <div className={`aspect-square rounded-[40px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 ${profilePreview ? "border-[#10b8a6] bg-white" : "border-gray-200 group-hover:border-gray-300"
-                      }`}>
+                    <label
+                      htmlFor="profileImage"
+                      className={`aspect-square rounded-[40px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 cursor-pointer ${profilePreview ? "border-[#10b8a6] bg-white" : "border-gray-200 group-hover:border-gray-300"
+                        }`}
+                    >
                       {profilePreview ? (
                         <img src={profilePreview} alt="Profile" className="w-full h-full object-cover animate-fade-in" />
                       ) : (
@@ -196,7 +260,25 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                           <span className="text-sm font-medium text-gray-500">Upload photo</span>
                         </>
                       )}
-                    </div>
+                    </label>
+                    {profilePreview && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => profileInputRef.current?.click()}
+                          className="text-sm font-semibold text-[#10b8a6] hover:text-[#0e9f8e] transition-colors"
+                        >
+                          Replace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveProfile}
+                          className="text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -205,15 +287,23 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                   <div className="flex items-center gap-2 mb-1">
                     <ShieldCheck className="w-4 h-4 text-gray-400" />
                     <label className="text-[14px] font-semibold text-gray-900">National ID Scan</label>
+                    <span className="text-[11px] font-semibold text-gray-400">Required</span>
                   </div>
                   <div className="relative group">
                     <input
-                      type="file" accept="image/*" name="nationalIdImage"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      ref={idInputRef}
+                      id="nationalIdImage"
+                      type="file"
+                      accept="image/*"
+                      name="nationalIdImage"
+                      className="sr-only"
                       onChange={(e) => handleFileChange(e, "id")}
                     />
-                    <div className={`aspect-video rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 ${idPreview ? "border-[#10b8a6] bg-white" : "border-gray-200 group-hover:border-gray-300"
-                      }`}>
+                    <label
+                      htmlFor="nationalIdImage"
+                      className={`aspect-video rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 cursor-pointer ${idPreview ? "border-[#10b8a6] bg-white" : "border-gray-200 group-hover:border-gray-300"
+                        }`}
+                    >
                       {idPreview ? (
                         <img src={idPreview} alt="ID" className="w-full h-full object-cover animate-fade-in" />
                       ) : (
@@ -222,7 +312,25 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                           <span className="text-sm font-medium text-gray-500">Upload ID</span>
                         </>
                       )}
-                    </div>
+                    </label>
+                    {idPreview && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => idInputRef.current?.click()}
+                          className="text-sm font-semibold text-[#10b8a6] hover:text-[#0e9f8e] transition-colors"
+                        >
+                          Replace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveId}
+                          className="text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -245,6 +353,15 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
           </form>
         </div>
       </main>
+
+      <ImageCropperModal
+        open={!!activeCrop}
+        file={activeCrop?.file || null}
+        aspect={activeCrop?.type === "id" ? 16 / 9 : 1}
+        title={activeCrop?.type === "id" ? "Crop ID scan" : "Crop profile photo"}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }

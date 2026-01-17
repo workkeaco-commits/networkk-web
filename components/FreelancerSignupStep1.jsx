@@ -69,7 +69,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   id="firstName"
                   name="firstName"
                   type="text"
-                  placeholder="Tameem"
+                  placeholder="First name"
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
@@ -81,7 +81,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   id="lastName"
                   name="lastName"
                   type="text"
-                  placeholder="Hussein"
+                  placeholder="Last name"
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
@@ -95,7 +95,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                 id="phone"
                 name="phone"
                 type="tel"
-                placeholder="01012345678"
+                placeholder="Phone number"
                 className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
               />
             </div>
