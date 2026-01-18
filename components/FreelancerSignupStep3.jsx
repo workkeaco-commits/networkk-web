@@ -24,23 +24,61 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
     setCerts((prev) => prev.filter((c) => c !== v));
   }
 
-  function handleFileChange(e, type) {
-    const file = e.target.files?.[0];
+  function isHeicFile(file) {
+    if (!file) return false;
+    const type = (file.type || "").toLowerCase();
+    return type.includes("heic") || type.includes("heif") || /\.(heic|heif)$/i.test(file.name || "");
+  }
+
+  async function normalizeImageFile(file) {
+    if (!isHeicFile(file)) return file;
+    try {
+      const heic2any = (await import("heic2any")).default;
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+      const blob = Array.isArray(converted) ? converted[0] : converted;
+      if (!blob || !blob.size) throw new Error("Empty HEIC conversion.");
+      const baseName = (file.name || "image").replace(/\.(heic|heif)$/i, "");
+      return new File([blob], `${baseName}.jpg`, { type: "image/jpeg" });
+    } catch (err) {
+      setFileError("HEIC/HEIF images are not supported. Please upload a JPG or PNG image.");
+      return null;
+    }
+  }
+
+  async function handleFileChange(e, type) {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    setFileError("");
-    if (type === "id") {
-      const url = URL.createObjectURL(file);
-      if (idPreview) URL.revokeObjectURL(idPreview);
-      setIdPreview(url);
-      setNationalIdFile(file);
-      e.target.value = "";
+    input.value = "";
+    if (!file.size) {
+      setFileError("That file is empty. Please choose another image.");
       return;
     }
-    setActiveCrop({ type, file });
-    e.target.value = "";
+    setFileError("");
+
+    const normalized = await normalizeImageFile(file);
+    if (!normalized) return;
+    if (!normalized.size) {
+      setFileError("That file is empty after processing. Please upload a JPG or PNG image.");
+      return;
+    }
+
+    if (type === "id") {
+      const url = URL.createObjectURL(normalized);
+      if (idPreview) URL.revokeObjectURL(idPreview);
+      setIdPreview(url);
+      setNationalIdFile(normalized);
+      return;
+    }
+    setActiveCrop({ type, file: normalized });
   }
 
   function handleCropConfirm(croppedFile) {
+    if (!croppedFile || !croppedFile.size) {
+      setFileError("We couldn't process that image. Please upload a JPG or PNG image.");
+      setActiveCrop(null);
+      return;
+    }
     const url = URL.createObjectURL(croppedFile);
     if (activeCrop?.type === "profile") {
       if (profilePreview) URL.revokeObjectURL(profilePreview);
@@ -78,6 +116,10 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
     e.preventDefault();
     if (!profileFile || !nationalIdFile) {
       setFileError("Profile photo and national ID scan are required.");
+      return;
+    }
+    if (!profileFile.size || !nationalIdFile.size) {
+      setFileError("Uploaded files cannot be empty. Please choose another image.");
       return;
     }
     const fd = new FormData(e.currentTarget);

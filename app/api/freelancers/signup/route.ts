@@ -16,6 +16,18 @@ export async function POST(req: Request) {
     if (!profileFile || !nationalIdFile) {
       return NextResponse.json({ error: { message: 'Profile photo and national ID are required' } }, { status: 400 });
     }
+    const isHeic = (file: File | null) => {
+      if (!file) return false;
+      const type = (file.type || '').toLowerCase();
+      const name = (file.name || '').toLowerCase();
+      return type.includes('heic') || type.includes('heif') || name.endsWith('.heic') || name.endsWith('.heif');
+    };
+    if (!profileFile.size || !nationalIdFile.size) {
+      return NextResponse.json({ error: { message: 'Uploaded files cannot be empty.' } }, { status: 400 });
+    }
+    if (isHeic(profileFile) || isHeic(nationalIdFile)) {
+      return NextResponse.json({ error: { message: 'HEIC/HEIF images are not supported. Please upload JPG or PNG.' } }, { status: 400 });
+    }
 
     console.log('[signup] received payload keys:', Object.keys(payload));
     console.log('[signup] files:', {

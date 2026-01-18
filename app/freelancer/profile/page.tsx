@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import FreelancerSidebar from "@/components/FreelancerSidebar";
@@ -22,6 +22,7 @@ import {
     Shield
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ImageCropperModal from "@/components/ImageCropperModal";
 
 export default function FreelancerProfilePage() {
     const router = useRouter();
@@ -31,14 +32,17 @@ export default function FreelancerProfilePage() {
     const [editMode, setEditMode] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
+    const [avatarUploading, setAvatarUploading] = useState(false);
     const [passwordSaving, setPasswordSaving] = useState(false);
     const [passwordError, setPasswordError] = useState("");
     const [passwordSuccess, setPasswordSuccess] = useState("");
+    const [avatarCrop, setAvatarCrop] = useState<{ file: File } | null>(null);
     const [passwordInputs, setPasswordInputs] = useState({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
     });
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
     const [profile, setProfile] = useState({
         freelancer_id: null,
@@ -102,6 +106,112 @@ export default function FreelancerProfilePage() {
             mounted = false;
         };
     }, [router]);
+
+    const isHeicFile = (file: File | null) => {
+        if (!file) return false;
+        const type = (file.type || "").toLowerCase();
+        const name = (file.name || "").toLowerCase();
+        return type.includes("heic") || type.includes("heif") || name.endsWith(".heic") || name.endsWith(".heif");
+    };
+
+    const normalizeImageFile = async (file: File) => {
+        if (!isHeicFile(file)) return file;
+        try {
+            const heic2any = (await import("heic2any")).default;
+            const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+            const blob = Array.isArray(converted) ? converted[0] : converted;
+            if (!blob || !blob.size) throw new Error("Empty HEIC conversion.");
+            const baseName = (file.name || "image").replace(/\.(heic|heif)$/i, "");
+            return new File([blob], `${baseName}.jpg`, { type: "image/jpeg" });
+        } catch (err) {
+            throw new Error("HEIC/HEIF images are not supported. Please upload a JPG or PNG image.");
+        }
+    };
+
+    const uploadAvatar = async (file: File) => {
+        if (!file.size) {
+            setErrorMsg("That file is empty. Please upload a JPG or PNG image.");
+            return;
+        }
+        if (!profile?.freelancer_id) {
+            setErrorMsg("Missing profile details. Please refresh and try again.");
+            return;
+        }
+
+        setErrorMsg("");
+        setSuccessMsg("");
+        setAvatarUploading(true);
+
+        try {
+            const { data: auth } = await supabase.auth.getUser();
+            if (!auth?.user) throw new Error("You must be signed in to update your photo.");
+
+            const avatarPath = `avatars/${auth.user.id}-${Date.now()}`;
+            const { error: uploadError } = await supabase
+                .storage
+                .from("public-avatars")
+                .upload(avatarPath, file, { upsert: false, contentType: file.type || "image/jpeg" });
+            if (uploadError) {
+                console.error("[profile avatar] upload failed", uploadError);
+                const details = [uploadError.message, uploadError.details, uploadError.hint].filter(Boolean).join(" ");
+                throw new Error(details || "Avatar upload failed.");
+            }
+
+            const { data: pub } = supabase.storage.from("public-avatars").getPublicUrl(avatarPath);
+            const publicUrl = pub.publicUrl;
+
+            const { error: updateError } = await supabase
+                .from("freelancers")
+                .update({ personal_img_url: publicUrl })
+                .eq("freelancer_id", profile.freelancer_id);
+            if (updateError) {
+                console.error("[profile avatar] profile update failed", updateError);
+                const details = [updateError.message, updateError.details, updateError.hint].filter(Boolean).join(" ");
+                throw new Error(details || "Profile update failed.");
+            }
+
+            setProfile((prev) => ({ ...prev, personal_img_url: publicUrl }));
+            setSuccessMsg("Profile photo updated.");
+            setTimeout(() => setSuccessMsg(""), 3000);
+        } catch (err: any) {
+            setErrorMsg(err?.message || "Failed to update profile photo.");
+        } finally {
+            setAvatarUploading(false);
+        }
+    };
+
+    const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        const input = e.currentTarget;
+        const file = input.files?.[0];
+        input.value = "";
+        if (!file) return;
+        if (avatarUploading) return;
+        if (!file.size) {
+            setErrorMsg("That file is empty. Please upload a JPG or PNG image.");
+            return;
+        }
+
+        try {
+            const normalized = await normalizeImageFile(file);
+            if (!normalized.size) throw new Error("That file is empty after processing. Please upload a JPG or PNG image.");
+            setErrorMsg("");
+            setSuccessMsg("");
+            setAvatarCrop({ file: normalized });
+        } catch (err: any) {
+            setErrorMsg(err?.message || "Failed to update profile photo.");
+        }
+    };
+
+    const handleAvatarCropConfirm = (croppedFile: File) => {
+        setAvatarCrop(null);
+        if (!croppedFile || !croppedFile.size) {
+            setErrorMsg("We couldn't process that image. Please upload a JPG or PNG image.");
+            return;
+        }
+        void uploadAvatar(croppedFile);
+    };
+
+    const handleAvatarCropCancel = () => setAvatarCrop(null);
 
     async function handleSave() {
         if (!profile?.freelancer_id) return;
@@ -230,9 +340,22 @@ export default function FreelancerProfilePage() {
                                         </div>
                                     )}
                                 </div>
+                                <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="sr-only"
+                                    onChange={handleAvatarChange}
+                                    disabled={!editMode || avatarUploading}
+                                />
                                 {editMode && (
-                                    <button className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[32px]">
-                                        <Camera className="text-white" size={24} />
+                                    <button
+                                        type="button"
+                                        onClick={() => avatarInputRef.current?.click()}
+                                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[32px]"
+                                        disabled={avatarUploading}
+                                    >
+                                        {avatarUploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="text-white" size={24} />}
                                     </button>
                                 )}
                             </div>
@@ -516,6 +639,15 @@ export default function FreelancerProfilePage() {
                     </div>
                 </div>
             </main>
+
+            <ImageCropperModal
+                open={!!avatarCrop}
+                file={avatarCrop?.file || null}
+                aspect={1}
+                title="Crop profile photo"
+                onCancel={handleAvatarCropCancel}
+                onConfirm={handleAvatarCropConfirm}
+            />
         </div>
     );
 }

@@ -88,6 +88,7 @@ export default function ImageCropperModal({
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
   const [display, setDisplay] = useState({ x: 0, y: 0, w: 0, h: 0, scale: 1 });
   const [crop, setCrop] = useState({ x: 0, y: 0, w: 0, h: 0 });
+  const [errorMsg, setErrorMsg] = useState("");
 
   const displayRef = useRef(display);
   const cropRef = useRef(crop);
@@ -108,10 +109,12 @@ export default function ImageCropperModal({
     if (!open || !file) {
       setImageUrl(null);
       setImgSize({ w: 0, h: 0 });
+      setErrorMsg("");
       return;
     }
     const url = URL.createObjectURL(file);
     setImageUrl(url);
+    setErrorMsg("");
     return () => URL.revokeObjectURL(url);
   }, [open, file]);
 
@@ -274,7 +277,10 @@ export default function ImageCropperModal({
     const quality = outputType === "image/jpeg" ? 0.9 : undefined;
     canvas.toBlob(
       (blob) => {
-        if (!blob) return;
+        if (!blob || !blob.size) {
+          setErrorMsg("We couldn't process that image. Please upload a JPG or PNG image.");
+          return;
+        }
         const baseName = file.name ? file.name.replace(/\.[^/.]+$/, "") : "image";
         const ext = outputType === "image/png" ? "png" : "jpg";
         const croppedFile = new File([blob], `${baseName}-cropped.${ext}`, { type: outputType });
@@ -367,6 +373,9 @@ export default function ImageCropperModal({
         </div>
 
         <div className="mt-6 flex items-center justify-end gap-3">
+          {errorMsg ? (
+            <p className="mr-auto text-xs font-medium text-red-500">{errorMsg}</p>
+          ) : null}
           <button
             type="button"
             onClick={onCancel}
