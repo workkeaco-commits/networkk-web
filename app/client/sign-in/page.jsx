@@ -110,6 +110,11 @@ function ClientSignInContent() {
                 className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm"
               />
             </div>
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-sm text-[#10b8a6] hover:underline">
+                Forgot password?
+              </Link>
+            </div>
 
             <button
               type="submit"
