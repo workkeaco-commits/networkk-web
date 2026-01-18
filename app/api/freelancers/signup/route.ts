@@ -99,6 +99,11 @@ export async function POST(req: Request) {
     const jobTitle = String(payload.jobTitle || '');
     const bio = String(payload.bio || '');
     const skills = Array.isArray(payload.skills) ? payload.skills.join(',') : '';
+    const categoryIdRaw = payload.categoryId ?? payload.category_id;
+    const categoryId = Number(categoryIdRaw);
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
+      return NextResponse.json({ error: { message: 'Category is required' } }, { status: 400 });
+    }
 
     const { data: frow, error: eProf } = await supabaseAdmin
       .from('freelancers')
@@ -111,6 +116,7 @@ export async function POST(req: Request) {
         skills, phone_number: phone, email,
         personal_img_url: personalImgUrl,
         national_id_img_url: nationalIdPath,
+        category_id: categoryId,
         approval_status: 'pending',
       })
       .select('freelancer_id')

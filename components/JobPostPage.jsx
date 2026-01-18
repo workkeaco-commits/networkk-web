@@ -313,12 +313,19 @@ export default function JobPostPage() {
       const rows = data.map((c) => ({
         id: Number(c.category_id),
         name: c.name,
+        slug: c.slug,
         parentId: c.parent_id === null ? null : Number(c.parent_id),
       }));
 
-      const parents = rows.filter((c) => c.parentId === null);
+      const blocked = new Set(["tech"]);
+      const filteredRows = rows.filter((c) => {
+        const name = String(c.name || "").toLowerCase();
+        const slug = String(c.slug || "").toLowerCase();
+        return !(blocked.has(name) || blocked.has(slug));
+      });
+      const parents = filteredRows.filter((c) => c.parentId === null);
       const childMap = new Map(parents.map((p) => [p.id, []]));
-      rows.forEach((c) => {
+      filteredRows.forEach((c) => {
         if (c.parentId !== null && childMap.has(c.parentId)) {
           childMap.get(c.parentId).push(c);
         }

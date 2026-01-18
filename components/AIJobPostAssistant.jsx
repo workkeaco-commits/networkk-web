@@ -22,7 +22,6 @@ export default function AIJobPostAssistant({ clientName = "there" }) {
 
   const fallbackCategories = useMemo(
     () => [
-      { id: 1, name: "Tech" },
       { id: 2, name: "Frontend" },
       { id: 3, name: "Backend" },
       { id: 4, name: "AI" },
@@ -48,7 +47,7 @@ export default function AIJobPostAssistant({ clientName = "there" }) {
     async function loadCategories() {
       const { data, error: e } = await supabase
         .from("categories")
-        .select("category_id,name,parent_id,sort_order")
+        .select("category_id,name,slug,parent_id,sort_order")
         .order("parent_id", { ascending: true, nullsFirst: true })
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
@@ -62,12 +61,19 @@ export default function AIJobPostAssistant({ clientName = "there" }) {
       const rows = data.map((c) => ({
         id: Number(c.category_id),
         name: String(c.name),
+        slug: String(c.slug || ""),
         parentId: c.parent_id === null ? null : Number(c.parent_id),
       }));
 
-      const parents = rows.filter((r) => r.parentId === null);
+      const blocked = new Set(["tech"]);
+      const filteredRows = rows.filter((r) => {
+        const name = r.name.toLowerCase();
+        const slug = r.slug.toLowerCase();
+        return !(blocked.has(name) || blocked.has(slug));
+      });
+      const parents = filteredRows.filter((r) => r.parentId === null);
       const childMap = new Map(parents.map((p) => [p.id, []]));
-      rows.forEach((r) => {
+      filteredRows.forEach((r) => {
         if (r.parentId !== null && childMap.has(r.parentId)) {
           childMap.get(r.parentId).push(r);
         }

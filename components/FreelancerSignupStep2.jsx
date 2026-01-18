@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Plus, Briefcase, X } from "lucide-react";
+import { supabase } from "@/lib/supabase/browser";
 
 const SKILL_SUGGESTIONS = [
   "Python",
@@ -187,6 +188,63 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
   const [presentProjects, setPresentProjects] = useState({});
   const [startDates, setStartDates] = useState({});
   const [endDates, setEndDates] = useState({});
+  const [catOptions, setCatOptions] = useState([]);
+  const [categoryId, setCategoryId] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("category_id, name, slug, parent_id, sort_order")
+        .order("parent_id", { ascending: true, nullsFirst: true })
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
+      if (error || !data) {
+        console.error("categories load error:", error?.message);
+        if (mounted) setCatOptions([]);
+        return;
+      }
+
+      const rows = data.map((c) => ({
+        id: Number(c.category_id),
+        name: c.name,
+        slug: c.slug,
+        parentId: c.parent_id === null ? null : Number(c.parent_id),
+      }));
+
+      const blocked = new Set(["tech"]);
+      const filteredRows = rows.filter((c) => {
+        const name = String(c.name || "").toLowerCase();
+        const slug = String(c.slug || "").toLowerCase();
+        return !(blocked.has(name) || blocked.has(slug));
+      });
+      const parents = filteredRows.filter((c) => c.parentId === null);
+      const childMap = new Map(parents.map((p) => [p.id, []]));
+      filteredRows.forEach((c) => {
+        if (c.parentId !== null && childMap.has(c.parentId)) {
+          childMap.get(c.parentId).push(c);
+        }
+      });
+
+      const options = [];
+      for (const p of parents) {
+        const kids = childMap.get(p.id) || [];
+        if (kids.length === 0) {
+          options.push({ id: p.id, label: p.name });
+        } else {
+          kids.forEach((k) => options.push({ id: k.id, label: `${p.name} — ${k.name}` }));
+        }
+      }
+
+      if (mounted) setCatOptions(options);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function handleAddSkill(name) {
     const parts = name
@@ -261,6 +319,11 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
     const fd = new FormData(e.currentTarget);
     const jobTitle = (fd.get("jobTitle") || "").toString().trim();
     const bio = (fd.get("bio") || "").toString().trim();
+    const categoryIdNum = Number(categoryId);
+    if (!Number.isFinite(categoryIdNum) || categoryIdNum <= 0) {
+      alert("Please choose a category.");
+      return;
+    }
 
     const projRows = projects.map((pid, index) => {
       const start = startDates[pid] || "";
@@ -295,7 +358,7 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
 
     const proj = projRows.filter((p) => p.name || p.summary || p.start || p.end);
 
-    onNext({ jobTitle, bio, skills, projects: proj });
+    onNext({ jobTitle, bio, skills, projects: proj, categoryId: categoryIdNum });
   }
 
   return (
@@ -334,6 +397,29 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                   required
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300 shadow-sm"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="category" className="text-[14px] font-semibold text-gray-900 ml-1">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  required
+                  className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm text-gray-700"
+                >
+                  <option value="" disabled>
+                    Select a category
+                  </option>
+                  {catOptions.map((opt) => (
+                    <option key={opt.id} value={String(opt.id)}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">
