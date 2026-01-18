@@ -56,6 +56,7 @@ export async function POST(req: Request) {
 
     if (eClient) return NextResponse.json({ error: { message: eClient.message } }, { status: 400 });
 
+    let emailStatus: "sent" | "skipped" | "failed" = "failed";
     try {
       const redirectTo = `${getAppBaseUrl()}/client/sign-in?verified=1`;
       const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
@@ -78,14 +79,21 @@ export async function POST(req: Request) {
             person: { firstName, lastName, companyName },
             activationLink,
           });
-          await sendEmail({ to: email, ...activationEmail });
+          const sendResult = await sendEmail({ to: email, ...activationEmail });
+          if (sendResult?.ok) {
+            emailStatus = "sent";
+          } else if (sendResult?.skipped) {
+            emailStatus = "skipped";
+          }
+        } else {
+          console.error("[client-signup] activation link missing for:", email);
         }
       }
     } catch (err) {
       console.error("[client-signup] activation email failed:", err);
     }
 
-    return NextResponse.json({ ok: true, client_id: crow.client_id });
+    return NextResponse.json({ ok: true, client_id: crow.client_id, email_status: emailStatus });
   } catch (err: any) {
     console.error('[client-signup] fatal:', err);
     return NextResponse.json({ error: { message: err.message || 'Server error' } }, { status: 500 });

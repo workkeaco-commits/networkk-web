@@ -31,9 +31,11 @@ export default function ClientSignupPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Signup failed");
 
-      alert("Client account created!");
-      // redirect if you want:
-      // window.location.href = "/client/dashboard";
+      if (json?.email_status === "sent") {
+        window.location.href = "/client/signup/sent";
+      } else {
+        window.location.href = "/client/signup/failed";
+      }
     } catch (err) {
       setErrorMsg(err.message || "Something went wrong");
     } finally {
@@ -118,12 +120,12 @@ export default function ClientSignupPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="firstName" className="text-[13px] font-medium text-gray-500 ml-1">First name</label>
-                  <input id="firstName" name="firstName" type="text" placeholder="Tameem"
+                  <input id="firstName" name="firstName" type="text" placeholder="First name"
                     className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300" />
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="lastName" className="text-[13px] font-medium text-gray-500 ml-1">Last name</label>
-                  <input id="lastName" name="lastName" type="text" placeholder="Hussein"
+                  <input id="lastName" name="lastName" type="text" placeholder="Last name"
                     className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300" />
                 </div>
               </div>
@@ -132,18 +134,18 @@ export default function ClientSignupPage() {
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-2">
                     <label htmlFor="companyName" className="text-[13px] font-medium text-gray-500 ml-1">Company name</label>
-                    <input id="companyName" name="companyName" type="text" placeholder="Networkk Inc."
+                    <input id="companyName" name="companyName" type="text" placeholder="Company name"
                       className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="companyField" className="text-[13px] font-medium text-gray-500 ml-1">Industry</label>
-                      <input id="companyField" name="companyField" type="text" placeholder="Software"
+                      <input id="companyField" name="companyField" type="text" placeholder="Industry"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300" />
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="companyLocation" className="text-[13px] font-medium text-gray-500 ml-1">Location</label>
-                      <input id="companyLocation" name="companyLocation" type="text" placeholder="Cairo"
+                      <input id="companyLocation" name="companyLocation" type="text" placeholder="Location"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300" />
                     </div>
                   </div>
@@ -152,7 +154,7 @@ export default function ClientSignupPage() {
 
               <div className="space-y-2">
                 <label htmlFor="phone" className="text-[13px] font-medium text-gray-500 ml-1">Phone number (Egypt)</label>
-                <input id="phone" name="phone" type="tel" placeholder="01012345678"
+                <input id="phone" name="phone" type="tel" placeholder="Phone number"
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 outline-none transition-all placeholder:text-gray-300" />
               </div>
 
@@ -194,4 +196,3 @@ export default function ClientSignupPage() {
     </div>
   );
 }
-

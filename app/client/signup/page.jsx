@@ -30,8 +30,11 @@ export default function ClientSignupPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || "Signup failed");
 
-      alert("Account created. Please check your email to activate your account.");
-      // window.location.href = "/client/dashboard";
+      if (json?.email_status === "sent") {
+        window.location.href = "/client/signup/sent";
+      } else {
+        window.location.href = "/client/signup/failed";
+      }
     } catch (err) {
       setErrorMsg(err?.message || "Something went wrong");
     } finally {
@@ -139,7 +142,7 @@ export default function ClientSignupPage() {
                     id="firstName"
                     name="firstName"
                     type="text"
-                    placeholder="Tameem"
+                    placeholder="First name"
                     className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                   />
                 </div>
@@ -152,7 +155,7 @@ export default function ClientSignupPage() {
                     id="lastName"
                     name="lastName"
                     type="text"
-                    placeholder="Hussein"
+                    placeholder="Last name"
                     className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                   />
                 </div>
@@ -168,7 +171,7 @@ export default function ClientSignupPage() {
                       id="companyName"
                       name="companyName"
                       type="text"
-                      placeholder="Networkk Inc."
+                      placeholder="Company name"
                       className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                     />
                   </div>
@@ -182,7 +185,7 @@ export default function ClientSignupPage() {
                         id="companyField"
                         name="companyField"
                         type="text"
-                        placeholder="Software"
+                      placeholder="Industry"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                       />
                     </div>
@@ -195,7 +198,7 @@ export default function ClientSignupPage() {
                         id="companyLocation"
                         name="companyLocation"
                         type="text"
-                        placeholder="Cairo"
+                      placeholder="Location"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                       />
                     </div>
@@ -211,7 +214,7 @@ export default function ClientSignupPage() {
                   id="phone"
                   name="phone"
                   type="tel"
-                  placeholder="01012345678"
+                  placeholder="Phone number"
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all placeholder:text-gray-300"
                 />
               </div>
