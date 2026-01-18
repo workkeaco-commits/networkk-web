@@ -27,6 +27,18 @@ import ImageCropperModal from "@/components/ImageCropperModal";
 export default function FreelancerProfilePage() {
     const router = useRouter();
 
+    type FreelancerProfile = {
+        freelancer_id: number | null;
+        first_name: string;
+        last_name: string;
+        job_title: string;
+        bio: string;
+        email: string;
+        phone_number: string;
+        skills: string;
+        personal_img_url: string | null;
+    };
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -44,7 +56,7 @@ export default function FreelancerProfilePage() {
     });
     const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
-    const [profile, setProfile] = useState({
+    const [profile, setProfile] = useState<FreelancerProfile>({
         freelancer_id: null,
         first_name: "",
         last_name: "",
