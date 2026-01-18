@@ -153,7 +153,8 @@ export default function FreelancerProfilePage() {
                 .upload(avatarPath, file, { upsert: false, contentType: file.type || "image/jpeg" });
             if (uploadError) {
                 console.error("[profile avatar] upload failed", uploadError);
-                const details = [uploadError.message, uploadError.details, uploadError.hint].filter(Boolean).join(" ");
+                const extra = (uploadError as { details?: string; hint?: string } | null) || {};
+                const details = [uploadError.message, extra.details, extra.hint].filter(Boolean).join(" ");
                 throw new Error(details || "Avatar upload failed.");
             }
 
@@ -166,7 +167,8 @@ export default function FreelancerProfilePage() {
                 .eq("freelancer_id", profile.freelancer_id);
             if (updateError) {
                 console.error("[profile avatar] profile update failed", updateError);
-                const details = [updateError.message, updateError.details, updateError.hint].filter(Boolean).join(" ");
+                const extra = (updateError as { details?: string; hint?: string } | null) || {};
+                const details = [updateError.message, extra.details, extra.hint].filter(Boolean).join(" ");
                 throw new Error(details || "Profile update failed.");
             }
 
