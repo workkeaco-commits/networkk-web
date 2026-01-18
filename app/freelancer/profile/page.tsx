@@ -340,8 +340,8 @@ export default function FreelancerProfilePage() {
                     {/* Header Section */}
                     <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                         <div className="flex items-center gap-6">
-                            <div className="relative group">
-                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] overflow-hidden bg-white border border-[#f0f0f0] shadow-sm">
+                            <div className="relative group group-hover:cursor-pointer">
+                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] overflow-hidden bg-white border border-[#f0f0f0] shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:border-gray-300">
                                     {profile.personal_img_url ? (
                                         <img
                                             src={profile.personal_img_url}
@@ -360,18 +360,16 @@ export default function FreelancerProfilePage() {
                                     accept="image/*"
                                     className="sr-only"
                                     onChange={handleAvatarChange}
-                                    disabled={!editMode || avatarUploading}
+                                    disabled={avatarUploading}
                                 />
-                                {editMode && (
-                                    <button
-                                        type="button"
-                                        onClick={() => avatarInputRef.current?.click()}
-                                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[32px]"
-                                        disabled={avatarUploading}
-                                    >
-                                        {avatarUploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="text-white" size={24} />}
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => avatarInputRef.current?.click()}
+                                    className={`absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[32px] ${avatarUploading ? "pointer-events-none" : "cursor-pointer"}`}
+                                    aria-label="Change profile photo"
+                                >
+                                    {avatarUploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="text-white" size={24} />}
+                                </button>
                             </div>
                             <div>
                                 <motion.h1
@@ -404,14 +402,14 @@ export default function FreelancerProfilePage() {
                                     >
                                         <button
                                             onClick={() => setEditMode(false)}
-                                            className="px-6 py-2.5 rounded-full bg-white border border-[#d2d2d7] text-black text-[14px] font-semibold hover:bg-[#fafafa] transition-all"
+                                            className="px-6 py-2.5 rounded-full bg-white border border-[#d2d2d7] text-black text-[14px] font-semibold hover:bg-[#fafafa] transition-all cursor-pointer"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+                                            className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                             Save Changes
@@ -424,7 +422,7 @@ export default function FreelancerProfilePage() {
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.9 }}
                                         onClick={() => setEditMode(true)}
-                                        className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] transition-all flex items-center gap-2 shadow-sm"
+                                        className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] hover:-translate-y-0.5 hover:shadow-md transition-all flex items-center gap-2 shadow-sm cursor-pointer"
                                     >
                                         <Edit3 size={16} />
                                         Edit Profile
