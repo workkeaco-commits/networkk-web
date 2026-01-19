@@ -41,7 +41,7 @@ export default function HomePage() {
     async function loadShowcaseFreelancers() {
       const { data, error } = await supabase
         .from("freelancers")
-        .select("freelancer_id, first_name, last_name, job_title, personal_img_url")
+        .select("freelancer_id, first_name, last_name, job_title, personal_img_url, skills")
         .not("personal_img_url", "is", null)
         .limit(8);
 
@@ -52,13 +52,23 @@ export default function HomePage() {
         return;
       }
 
-      const normalized = (data || []).map((row) => ({
-        id: row.freelancer_id,
-        name:
-          [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || "Freelancer",
-        role: row.job_title || "Freelancer",
-        image: row.personal_img_url,
-      }));
+      const normalized = (data || []).map((row) => {
+        const rawSkills = Array.isArray(row.skills)
+          ? row.skills
+          : String(row.skills || "")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+
+        return {
+          id: row.freelancer_id,
+          name:
+            [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || "Freelancer",
+          role: row.job_title || "Freelancer",
+          image: row.personal_img_url,
+          skills: rawSkills,
+        };
+      });
 
       setShowcaseFreelancers(normalized);
       setCommunityAvatars(normalized.map((row) => row.image).filter(Boolean).slice(0, 3));
@@ -352,8 +362,19 @@ export default function HomePage() {
                 <div className="p-6">
                   <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{f.role}</p>
                   <div className="flex flex-wrap gap-2 mb-6">
-                    <span className="bg-gray-100 text-[11px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Top Rated</span>
-                    <span className="bg-gray-100 text-[11px] px-2.5 py-1 rounded-full text-gray-600 font-medium">Verified</span>
+                    {(f.skills || []).slice(0, 3).map((skill, index) => (
+                      <span
+                        key={`${f.id}-skill-${index}`}
+                        className="bg-gray-100 text-[11px] px-2.5 py-1 rounded-full text-gray-600 font-medium"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {(f.skills || []).length > 3 && (
+                      <span className="bg-gray-50 text-[11px] px-2.5 py-1 rounded-full text-gray-500 font-medium">
+                        .. more
+                      </span>
+                    )}
                   </div>
                   <button className="w-full py-2.5 rounded-full border border-gray-200 text-sm font-medium hover:border-black hover:bg-black hover:text-white transition-all">
                     View Profile

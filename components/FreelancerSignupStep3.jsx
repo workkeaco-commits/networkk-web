@@ -63,13 +63,6 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
       return;
     }
 
-    if (type === "id") {
-      const url = URL.createObjectURL(normalized);
-      if (idPreview) URL.revokeObjectURL(idPreview);
-      setIdPreview(url);
-      setNationalIdFile(normalized);
-      return;
-    }
     setActiveCrop({ type, file: normalized });
   }
 

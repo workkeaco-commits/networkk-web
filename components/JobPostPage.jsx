@@ -30,20 +30,20 @@ function SortableSkillItem({ id, onRemove }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
+      className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm"
     >
       <div
         className="flex items-center gap-3 cursor-grab active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4 text-slate-300" />
-        <span className="text-slate-800">{id}</span>
+        <GripVertical className="h-4 w-4 text-gray-300" />
+        <span className="text-gray-800">{id}</span>
       </div>
       <button
         type="button"
         onClick={() => onRemove(id)}
-        className="text-xs text-slate-500 hover:text-red-500"
+        className="text-xs text-gray-500 hover:text-red-500"
       >
         Remove
       </button>
@@ -69,12 +69,12 @@ function StepThreeDetails({
 }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-5 space-y-5">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 md:p-5 space-y-5">
         {/* Category (flat select) */}
         <div className="space-y-1.5">
           <label
             htmlFor="category"
-            className="block text-xs font-medium uppercase tracking-[0.16em] text-slate-400"
+            className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-500"
           >
             Field / category
           </label>
@@ -86,7 +86,7 @@ function StepThreeDetails({
               const v = e.target.value;
               setCategoryId(v ? Number(v) : "");
             }}
-            className="block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#10b8a6] focus:outline-none focus:ring-4 focus:ring-[#10b8a6]/5"
           >
             <option value="">Select a category</option>
             {catOptions.map((opt) => (
@@ -101,7 +101,7 @@ function StepThreeDetails({
         <div className="space-y-1.5">
           <label
             htmlFor="description"
-            className="block text-xs font-medium uppercase tracking-[0.16em] text-slate-400"
+            className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-500"
           >
             Description
           </label>
@@ -112,9 +112,9 @@ function StepThreeDetails({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the scope, main tasks, tools or tech stack, and any deadlines."
-            className="block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#10b8a6] focus:outline-none focus:ring-4 focus:ring-[#10b8a6]/5"
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-gray-400">
             Write as if you&apos;re explaining it to a new team member on their
             first day.
           </p>
@@ -124,11 +124,11 @@ function StepThreeDetails({
         <div className="space-y-1.5">
           <label
             htmlFor="skillsInput"
-            className="block text-xs font-medium uppercase tracking-[0.16em] text-slate-400"
+            className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-500"
           >
             Skills needed
           </label>
-          <p className="text-[11px] text-slate-400 mb-1">
+          <p className="text-[11px] text-gray-400 mb-1">
             Start typing to search. You can also add your own, then drag to
             reorder importance.
           </p>
@@ -147,12 +147,12 @@ function StepThreeDetails({
                   }
                 }}
                 placeholder="Add a skill (e.g. PyTorch, React, SQL)"
-                className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-[#10b8a6] focus:outline-none focus:ring-4 focus:ring-[#10b8a6]/5"
               />
               <button
                 type="button"
                 onClick={() => handleAddSkill(skillInput)}
-                className="inline-flex items-center justify-center gap-1 rounded-xl bg-[#079c02] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#056b01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#079c02]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                className="inline-flex items-center justify-center gap-1 rounded-xl bg-[#10b8a6] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0e9f8e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b8a6]/25 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 <Plus className="h-4 w-4" />
                 Add
@@ -160,16 +160,16 @@ function StepThreeDetails({
             </div>
 
             {(filteredSuggestions.length > 0 || skillInput.trim()) && (
-              <div className="mt-1 rounded-xl border border-slate-200 bg-white shadow-lg text-sm max-h-48 overflow-y-auto">
+              <div className="mt-1 rounded-xl border border-gray-200 bg-white shadow-lg text-sm max-h-48 overflow-y-auto">
                 {filteredSuggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => handleAddSkill(s)}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50"
                   >
-                    <span className="text-slate-800">{s}</span>
-                    <span className="text-[11px] text-slate-400">from suggestions</span>
+                    <span className="text-gray-800">{s}</span>
+                    <span className="text-[11px] text-gray-400">from suggestions</span>
                   </button>
                 ))}
 
@@ -179,12 +179,12 @@ function StepThreeDetails({
                     <button
                       type="button"
                       onClick={() => handleAddSkill(skillInput)}
-                      className="flex w-full items-center justify-between border-t border-slate-100 px-3 py-2 text-left hover:bg-slate-50"
+                      className="flex w-full items-center justify-between border-t border-gray-100 px-3 py-2 text-left hover:bg-gray-50"
                     >
-                      <span className="text-slate-800">
+                      <span className="text-gray-800">
                         Add &quot;{skillInput.trim()}&quot;
                       </span>
-                      <span className="text-[11px] text-slate-400">custom skill</span>
+                      <span className="text-[11px] text-gray-400">custom skill</span>
                     </button>
                   )}
               </div>
@@ -206,12 +206,12 @@ function StepThreeDetails({
                   </div>
                 </SortableContext>
               </DndContext>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-gray-400">
                 Drag the handle to bubble the most important skills to the top.
               </p>
             </>
           ) : (
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-gray-400">
               No skills added yet. Start with the must-have skills first.
             </p>
           )}
@@ -457,11 +457,11 @@ export default function JobPostPage() {
   const stepLabels = ["Title", "Duration", "Details", "Budget"];
 
   if (loadingClient) {
-    return <div className="p-6 text-sm text-slate-600">Loading…</div>;
+    return <div className="p-6 text-sm text-gray-600">Loading…</div>;
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 md:py-12 flex justify-center">
+    <main className="min-h-screen bg-[#fbfbfd] px-4 py-8 md:py-12 flex justify-center">
       <div className="w-full max-w-2xl flex flex-col gap-8">
         {/* Stepper */}
         <div className="flex items-center justify-between gap-2">
@@ -474,16 +474,16 @@ export default function JobPostPage() {
                 className={
                   "flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] " +
                   (isActive
-                    ? "border-[#079c02] bg-white text-slate-900 shadow-sm"
-                    : "border-transparent text-slate-400")
+                    ? "border-[#10b8a6] bg-white text-gray-900 shadow-sm"
+                    : "border-transparent text-gray-400")
                 }
               >
                 <span
                   className={
                     "flex h-5 w-5 items-center justify-center rounded-full text-[11px] " +
                     (isActive
-                      ? "bg-[#079c02] text-white"
-                      : "bg-slate-200 text-slate-600")
+                      ? "bg-[#10b8a6] text-white"
+                      : "bg-gray-100 text-gray-600")
                   }
                 >
                   {n}
@@ -496,13 +496,13 @@ export default function JobPostPage() {
 
         {/* Header */}
         <header className="space-y-1">
-          <p className="text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase">
+          <p className="text-xs font-semibold tracking-[0.16em] text-gray-400 uppercase">
             Step {step} of 4
           </p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
             {stepTitle[step]}
           </h1>
-          <p className="text-sm text-slate-500">{stepSubtitle[step]}</p>
+          <p className="text-sm text-gray-500">{stepSubtitle[step]}</p>
         </header>
 
         {/* Step content */}
@@ -511,7 +511,7 @@ export default function JobPostPage() {
             <div className="space-y-3">
               <label
                 htmlFor="jobTitle"
-                className="block text-xs font-medium uppercase tracking-[0.16em] text-slate-400"
+                className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-500"
               >
                 Job title
               </label>
@@ -522,9 +522,9 @@ export default function JobPostPage() {
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
                 placeholder="Machine Learning Engineer for door detection project"
-                className="w-full border-0 border-b border-slate-300 bg-transparent px-0 pb-2 pt-1 text-base md:text-lg text-slate-900 placeholder:text-slate-400 focus:border-[#079c02] focus:outline-none focus:ring-0"
+                className="w-full border-0 border-b border-gray-300 bg-transparent px-0 pb-2 pt-1 text-base md:text-lg text-gray-900 placeholder:text-gray-400 focus:border-[#10b8a6] focus:outline-none focus:ring-0"
               />
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-gray-400">
                 Aim for 6–10 words. Mention the role + main task + domain.
               </p>
             </div>
@@ -532,18 +532,18 @@ export default function JobPostPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-gray-600">
                 Choose what feels closer. You can clarify in the description.
               </p>
-              <div className="inline-flex rounded-full bg-slate-100 p-1">
+              <div className="inline-flex rounded-full bg-gray-100 p-1">
                 <button
                   type="button"
                   onClick={() => setDuration("short")}
                   className={
                     "px-4 py-2 text-xs sm:text-sm rounded-full transition " +
                     (duration === "short"
-                      ? "bg-white shadow-sm text-slate-900"
-                      : "text-slate-500 hover:text-slate-800")
+                      ? "bg-white shadow-sm text-gray-900"
+                      : "text-gray-500 hover:text-gray-900")
                   }
                 >
                   Short term
@@ -554,14 +554,14 @@ export default function JobPostPage() {
                   className={
                     "px-4 py-2 text-xs sm:text-sm rounded-full transition " +
                     (duration === "long"
-                      ? "bg-white shadow-sm text-slate-900"
-                      : "text-slate-500 hover:text-slate-800")
+                      ? "bg-white shadow-sm text-gray-900"
+                      : "text-gray-500 hover:text-gray-900")
                   }
                 >
                   Long term
                 </button>
               </div>
-              <div className="grid gap-2 text-[11px] text-slate-400">
+              <div className="grid gap-2 text-[11px] text-gray-400">
                 <p>Short term → one clearly defined project, usually days to a few weeks.</p>
                 <p>Long term → ongoing work, multiple phases, or an evolving roadmap.</p>
               </div>
@@ -591,12 +591,12 @@ export default function JobPostPage() {
               <div className="space-y-3">
                 <label
                   htmlFor="price"
-                  className="block text-xs font-medium uppercase tracking-[0.16em] text-slate-400"
+                  className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-500"
                 >
                   Budget
                 </label>
                 <div className="flex items-baseline gap-3">
-                  <span className="text-sm text-slate-500">
+                  <span className="text-sm text-gray-500">
                     {currency === "EGP" && "≈"}
                   </span>
                   <input
@@ -607,10 +607,10 @@ export default function JobPostPage() {
                     value={priceDisplay}
                     onChange={handlePriceChange}
                     placeholder="5,000"
-                    className="flex-1 border-0 border-b border-slate-300 bg-transparent px-0 pb-2 pt-1 text-lg text-slate-900 placeholder:text-slate-400 focus:border-[#079c02] focus:outline-none focus:ring-0"
+                    className="flex-1 border-0 border-b border-gray-300 bg-transparent px-0 pb-2 pt-1 text-lg text-gray-900 placeholder:text-gray-400 focus:border-[#10b8a6] focus:outline-none focus:ring-0"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-gray-400">
                   This can be a project total or a starting point. You can refine it later.
                 </p>
               </div>
@@ -618,7 +618,7 @@ export default function JobPostPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="currency"
-                  className="block text-xs font-medium uppercase tracking-[0.16em] text-slate-400"
+                  className="block text-xs font-medium uppercase tracking-[0.16em] text-gray-500"
                 >
                   Currency
                 </label>
@@ -627,7 +627,7 @@ export default function JobPostPage() {
                   name="currency"
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#10b8a6] focus:outline-none focus:ring-4 focus:ring-[#10b8a6]/5"
                 >
                   <option value="EGP">🇪🇬 EGP – Egyptian Pound</option>
                   <option value="USD">🇺🇸 USD – US Dollar</option>
@@ -648,7 +648,7 @@ export default function JobPostPage() {
             <button
               type="button"
               onClick={goBack}
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
             >
               Back
             </button>
@@ -661,10 +661,10 @@ export default function JobPostPage() {
             onClick={step < 4 ? goNext : handleSubmit}
             disabled={step === 4 && !clientId}
             className="inline-flex items-center justify-center rounded-xl 
-                       bg-[#079c02] px-4 py-2.5 text-sm font-semibold text-white shadow-sm 
-                       transition hover:bg-[#056b01] 
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#079c02]/70 
-                       focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                       bg-[#10b8a6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm 
+                       transition hover:bg-[#0e9f8e] 
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b8a6]/25 
+                       focus-visible:ring-offset-2 focus-visible:ring-offset-[#fbfbfd] disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {step < 4 ? "Next" : "Post job"}
           </button>
