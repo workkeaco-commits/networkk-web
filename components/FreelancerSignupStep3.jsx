@@ -63,6 +63,13 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
       return;
     }
 
+    if (type === "id") {
+      const url = URL.createObjectURL(normalized);
+      if (idPreview) URL.revokeObjectURL(idPreview);
+      setIdPreview(url);
+      setNationalIdFile(normalized);
+      return;
+    }
     setActiveCrop({ type, file: normalized });
   }
 
@@ -336,11 +343,11 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                     />
                     <label
                       htmlFor="nationalIdImage"
-                      className={`aspect-video rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 cursor-pointer ${idPreview ? "border-[#10b8a6] bg-white" : "border-gray-200 group-hover:border-gray-300"
-                        }`}
+                      className={`rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden bg-gray-50/50 cursor-pointer ${idPreview ? "border-[#10b8a6] bg-white" : "border-gray-200 group-hover:border-gray-300"
+                        } ${idPreview ? "py-0" : "py-10"}`}
                     >
                       {idPreview ? (
-                        <img src={idPreview} alt="ID" className="w-full h-full object-cover animate-fade-in" />
+                        <img src={idPreview} alt="ID" className="w-full h-auto object-contain animate-fade-in" />
                       ) : (
                         <>
                           <UploadCloud className="w-10 h-10 text-gray-300 mb-2 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
