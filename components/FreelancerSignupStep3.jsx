@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { GraduationCap, BookOpen, Plus, X, Camera, ShieldCheck, ChevronRight, UploadCloud } from "lucide-react";
+import { GraduationCap, BookOpen, Plus, X, Camera, ShieldCheck, ChevronRight, UploadCloud, Loader2 } from "lucide-react";
 import ImageCropperModal from "@/components/ImageCropperModal";
 
 export default function FreelancerSignupStep3({ onBack, onNext, submitting = false }) {
@@ -388,8 +388,17 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                 disabled={submitting}
                 className="bg-[#10b8a6] hover:bg-[#0e9f8e] text-white font-semibold rounded-full px-10 py-4 text-lg shadow-lg shadow-[#10b8a6]/20 transition-all flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? "Finishing..." : "Complete signup"}
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Finishing...
+                  </>
+                ) : (
+                  <>
+                    Complete signup
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={2.5} />
+                  </>
+                )}
               </button>
             </div>
           </form>
