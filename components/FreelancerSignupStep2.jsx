@@ -333,14 +333,20 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
         start: start || null,
         end: presentProjects[pid] ? null : end || null,
         summary: (fd.get(`projectSummary-${index}`) || "").toString().trim(),
+        hasData:
+          !!(fd.get(`projectName-${index}`) || "").toString().trim() ||
+          !!(fd.get(`projectSummary-${index}`) || "").toString().trim() ||
+          !!start ||
+          !!end ||
+          !!presentProjects[pid],
+        isPresent: !!presentProjects[pid],
       };
     });
 
-    const missingDates = projects.some((pid) => {
-      const start = startDates[pid] || "";
-      const end = endDates[pid] || "";
-      if (!start) return true;
-      if (!presentProjects[pid] && !end) return true;
+    const missingDates = projRows.some((p) => {
+      if (!p.hasData) return false;
+      if (!p.start) return true;
+      if (!p.isPresent && !p.end) return true;
       return false;
     });
     if (missingDates) {
@@ -349,14 +355,16 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
     }
 
     const invalidDates = projRows.some(
-      (p) => p.start && p.end && p.end < p.start
+      (p) => p.hasData && p.start && p.end && p.end < p.start
     );
     if (invalidDates) {
       alert("End date must be the same as or after the start date.");
       return;
     }
 
-    const proj = projRows.filter((p) => p.name || p.summary || p.start || p.end);
+    const proj = projRows
+      .filter((p) => p.hasData)
+      .map(({ name, start, end, summary }) => ({ name, start, end, summary }));
 
     onNext({ jobTitle, bio, skills, projects: proj, categoryId: categoryIdNum });
   }
@@ -569,7 +577,6 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                         id={`projectName-${index}`}
                         name={`projectName-${index}`}
                         type="text"
-                        required
                         placeholder="e.g. E-commerce Mobile App"
                         className="w-full bg-white border border-gray-200 rounded-[16px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none"
                       />
@@ -630,7 +637,6 @@ export default function FreelancerSignupStep2({ onBack, onNext, submitting = fal
                         id={`projectSummary-${index}`}
                         name={`projectSummary-${index}`}
                         rows={3}
-                        required
                         placeholder="What was your specific role and impact?"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none resize-none"
                       />
