@@ -42,11 +42,27 @@ export async function POST(req: Request) {
     const password = String(payload.password || '');
     const phone = String(payload.phone || '');
 
-    if (!email || !password) {
-      return NextResponse.json({ error: { message: 'Email and password are required' } }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: { message: 'Email is required' } }, { status: 400 });
     }
     if (!firstName || !lastName) {
       return NextResponse.json({ error: { message: 'First and last name are required' } }, { status: 400 });
+    }
+
+    const passwordOk =
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /[0-9]/.test(password);
+
+    if (!password) {
+      return NextResponse.json({ error: { message: 'Password is required' } }, { status: 400 });
+    }
+    if (!passwordOk) {
+      return NextResponse.json(
+        { error: { message: 'Password must be at least 8 characters and include uppercase, lowercase, and a number.' } },
+        { status: 400 }
+      );
     }
 
     const { data: created, error: eAuth } = await supabaseAdmin.auth.admin.createUser({

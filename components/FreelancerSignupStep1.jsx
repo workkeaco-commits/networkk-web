@@ -1,10 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, Rocket } from "lucide-react";
 
 export default function FreelancerSignupStep1({ onNext, submitting = false }) {
   const [err, setErr] = useState("");
+  const [passwordValue, setPasswordValue] = useState("");
+  const [passwordConfirmValue, setPasswordConfirmValue] = useState("");
+
+  const passwordChecks = {
+    length: passwordValue.length >= 8,
+    upper: /[A-Z]/.test(passwordValue),
+    lower: /[a-z]/.test(passwordValue),
+    number: /[0-9]/.test(passwordValue),
+  };
+  const passwordOk = Object.values(passwordChecks).every(Boolean);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -18,7 +28,13 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
     const password = (fd.get("password") || "").toString();
     const passwordConfirm = (fd.get("passwordConfirm") || "").toString();
 
-    if (!email || !password) return setErr("Email and password are required.");
+    if (!email) return setErr("Email is required.");
+    if (!password) return setErr("Password is required.");
+    if (!passwordOk) {
+      return setErr(
+        "Password must be at least 8 characters and include uppercase, lowercase, and a number."
+      );
+    }
     if (password !== passwordConfirm) return setErr("Passwords do not match.");
 
     // Optional validation (only if phone was entered)
@@ -35,7 +51,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
           {/* Header */}
           <div className="mb-12 text-center">
             <div className="w-16 h-16 bg-teal-50 text-[#10b8a6] rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-8 h-8" strokeWidth={1.5} />
+              <Rocket className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <p className="text-[12px] font-bold tracking-widest uppercase text-gray-400 mb-3">
               Step 1 of 3
@@ -122,6 +138,8 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   id="password"
                   name="password"
                   type="password"
+                  value={passwordValue}
+                  onChange={(e) => setPasswordValue(e.target.value)}
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                 />
               </div>
@@ -136,8 +154,29 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
                   id="passwordConfirm"
                   name="passwordConfirm"
                   type="password"
+                  value={passwordConfirmValue}
+                  onChange={(e) => setPasswordConfirmValue(e.target.value)}
                   className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                 />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3 text-[12px] text-gray-500">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
+                Password criteria
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <span className={passwordChecks.length ? "text-[#10b8a6]" : "text-gray-400"}>
+                  8+ characters
+                </span>
+                <span className={passwordChecks.upper ? "text-[#10b8a6]" : "text-gray-400"}>
+                  1 uppercase letter
+                </span>
+                <span className={passwordChecks.lower ? "text-[#10b8a6]" : "text-gray-400"}>
+                  1 lowercase letter
+                </span>
+                <span className={passwordChecks.number ? "text-[#10b8a6]" : "text-gray-400"}>
+                  1 number
+                </span>
               </div>
             </div>
 
