@@ -8,6 +8,16 @@ export default function ClientSignupPage() {
   const [accountType, setAccountType] = useState("company"); // "personal" | "company"
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [passwordValue, setPasswordValue] = useState("");
+  const [passwordConfirmValue, setPasswordConfirmValue] = useState("");
+
+  const passwordChecks = {
+    length: passwordValue.length >= 8,
+    upper: /[A-Z]/.test(passwordValue),
+    lower: /[a-z]/.test(passwordValue),
+    number: /[0-9]/.test(passwordValue),
+  };
+  const passwordOk = Object.values(passwordChecks).every(Boolean);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -19,7 +29,15 @@ export default function ClientSignupPage() {
 
       const password = (fd.get("password") || "").toString();
       const passwordConfirm = (fd.get("passwordConfirm") || "").toString();
-      if (!password || password !== passwordConfirm) {
+      if (!password) {
+        throw new Error("Password is required.");
+      }
+      if (!passwordOk) {
+        throw new Error(
+          "Password must be at least 8 characters and include uppercase, lowercase, and a number."
+        );
+      }
+      if (password !== passwordConfirm) {
         throw new Error("Passwords do not match.");
       }
 
@@ -241,6 +259,8 @@ export default function ClientSignupPage() {
                     id="password"
                     name="password"
                     type="password"
+                    value={passwordValue}
+                    onChange={(e) => setPasswordValue(e.target.value)}
                     className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                   />
                 </div>
@@ -253,8 +273,29 @@ export default function ClientSignupPage() {
                     id="passwordConfirm"
                     name="passwordConfirm"
                     type="password"
+                    value={passwordConfirmValue}
+                    onChange={(e) => setPasswordConfirmValue(e.target.value)}
                     className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all"
                   />
+                </div>
+              </div>
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3 text-[12px] text-gray-500">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
+                  Password criteria
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <span className={passwordChecks.length ? "text-[#10b8a6]" : "text-gray-400"}>
+                    8+ characters
+                  </span>
+                  <span className={passwordChecks.upper ? "text-[#10b8a6]" : "text-gray-400"}>
+                    1 uppercase letter
+                  </span>
+                  <span className={passwordChecks.lower ? "text-[#10b8a6]" : "text-gray-400"}>
+                    1 lowercase letter
+                  </span>
+                  <span className={passwordChecks.number ? "text-[#10b8a6]" : "text-gray-400"}>
+                    1 number
+                  </span>
                 </div>
               </div>
             </div>
