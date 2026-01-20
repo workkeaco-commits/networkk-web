@@ -26,7 +26,6 @@ export default function DashboardSidebar({ onSignOut }) {
         { name: "Messages", icon: MessageSquare, href: "/client/messages" },
         { name: "Contracts", icon: FileText, href: "/client/contracts" },
         { name: "Financials", icon: Wallet, href: "/client/financials" },
-        { name: "Settings", icon: Settings, href: "/client/settings" },
     ];
 
     return (
