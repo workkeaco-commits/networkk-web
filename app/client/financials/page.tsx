@@ -185,7 +185,7 @@ export default function ClientFinancialsPage() {
                   Last updated {formatDate(wallet?.updated_at || null)}
                 </div>
                 <div className="mt-4 text-sm text-gray-500">
-                  Held in escrow: {formatMoney(heldTotal, wallet?.currency || "EGP")}
+                  Amount on hold: {formatMoney(heldTotal, wallet?.currency || "EGP")}
                 </div>
               </div>
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Plus, Briefcase, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/browser";
 
-const SKILL_SUGGESTIONS_BY_CATEGORY = {
+export const SKILL_SUGGESTIONS_BY_CATEGORY = {
   frontend: [
     "HTML",
     "CSS",
@@ -796,7 +796,7 @@ const SKILL_SUGGESTIONS_BY_CATEGORY = {
   ],
 };
 
-const SKILL_SUGGESTIONS = Array.from(
+export const SKILL_SUGGESTIONS = Array.from(
   new Set(Object.values(SKILL_SUGGESTIONS_BY_CATEGORY).flat())
 );
 

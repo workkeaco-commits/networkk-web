@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus, Loader2 } from "lucide-react";
+import { SKILL_SUGGESTIONS } from "@/components/FreelancerSignupStep2";
 
 import {
   DndContext,
@@ -249,25 +250,15 @@ export default function JobPostPage() {
   // budget
   const [price, setPrice] = useState("");
   const [priceDisplay, setPriceDisplay] = useState("");
-  const [currency, setCurrency] = useState("EGP");
+  const currency = "EGP";
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // dnd sensors
   const sensors = useSensors(useSensor(PointerSensor));
 
   // preload suggestions
   useEffect(() => {
-    setAllSkills([
-      "Python",
-      "Machine Learning",
-      "Deep Learning",
-      "Computer Vision",
-      "React",
-      "Node.js",
-      "Data Analysis",
-      "SQL",
-      "Docker",
-      "Project Management",
-    ]);
+    setAllSkills(SKILL_SUGGESTIONS);
   }, []);
 
   // auth check + client_id load
@@ -399,12 +390,14 @@ export default function JobPostPage() {
   }
 
   async function handleSubmit() {
+    if (isSubmitting) return;
     try {
       if (!clientId) throw new Error("Client profile not found. Please sign in as a client.");
       if (!jobTitle.trim()) throw new Error("Title is required.");
       if (!price) throw new Error("Price is required.");
       if (!categoryId) throw new Error("Please select a category.");
 
+      setIsSubmitting(true);
       const payload = {
         jobTitle,
         duration,
@@ -430,6 +423,8 @@ export default function JobPostPage() {
       // router.refresh();
     } catch (e) {
       alert(e.message || "Error creating job");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -521,7 +516,7 @@ export default function JobPostPage() {
                 type="text"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="Machine Learning Engineer for door detection project"
+                placeholder="Job title"
                 className="w-full border-0 border-b border-gray-300 bg-transparent px-0 pb-2 pt-1 text-base md:text-lg text-gray-900 placeholder:text-gray-400 focus:border-[#10b8a6] focus:outline-none focus:ring-0"
               />
               <p className="text-[11px] text-gray-400">
@@ -622,21 +617,12 @@ export default function JobPostPage() {
                 >
                   Currency
                 </label>
-                <select
+                <div
                   id="currency"
-                  name="currency"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#10b8a6] focus:outline-none focus:ring-4 focus:ring-[#10b8a6]/5"
+                  className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm"
                 >
-                  <option value="EGP">🇪🇬 EGP – Egyptian Pound</option>
-                  <option value="USD">🇺🇸 USD – US Dollar</option>
-                  <option value="EUR">🇪🇺 Euro</option>
-                  <option value="GBP">🇬🇧 British Pound</option>
-                  <option value="SAR">🇸🇦 Saudi Riyal</option>
-                  <option value="AED">🇦🇪 UAE Dirham</option>
-                  <option value="KWD">🇰🇼 Kuwaiti Dinar</option>
-                </select>
+                  🇪🇬 EGP – Egyptian Pound
+                </div>
               </div>
             </div>
           )}
@@ -659,14 +645,23 @@ export default function JobPostPage() {
           <button
             type="button"
             onClick={step < 4 ? goNext : handleSubmit}
-            disabled={step === 4 && !clientId}
+            disabled={(step === 4 && !clientId) || isSubmitting}
             className="inline-flex items-center justify-center rounded-xl 
                        bg-[#10b8a6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm 
                        transition hover:bg-[#0e9f8e] 
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b8a6]/25 
                        focus-visible:ring-offset-2 focus-visible:ring-offset-[#fbfbfd] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {step < 4 ? "Next" : "Post job"}
+            {step < 4 ? (
+              "Next"
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Posting...
+              </>
+            ) : (
+              "Post job"
+            )}
           </button>
         </footer>
 
