@@ -8,17 +8,12 @@ import {
     User,
     Mail,
     Phone,
-    Briefcase,
     Code,
     Edit3,
     Save,
     X,
     Loader2,
     Camera,
-    ChevronRight,
-    Github,
-    Globe,
-    Twitter,
     Shield
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,6 +43,7 @@ export default function FreelancerProfilePage() {
     const [passwordSaving, setPasswordSaving] = useState(false);
     const [passwordError, setPasswordError] = useState("");
     const [passwordSuccess, setPasswordSuccess] = useState("");
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [avatarCrop, setAvatarCrop] = useState<{ file: File } | null>(null);
     const [passwordInputs, setPasswordInputs] = useState({
         currentPassword: "",
@@ -323,6 +319,324 @@ export default function FreelancerProfilePage() {
         router.push("/freelancer/signin");
     };
 
+    const renderSecuritySection = () => (
+        <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
+                    <Shield size={18} className="text-black" />
+                </div>
+                <h3 className="text-[17px] font-semibold text-black">Security</h3>
+            </div>
+
+            <div className="space-y-3">
+                {!showPasswordForm ? (
+                    <button
+                        type="button"
+                        onClick={() => setShowPasswordForm(true)}
+                        className="w-full rounded-xl bg-black text-white py-2.5 text-[13px] font-semibold hover:bg-[#1d1d1f] transition-all"
+                    >
+                        Change Password
+                    </button>
+                ) : (
+                    <>
+                        <input
+                            type="password"
+                            value={passwordInputs.currentPassword}
+                            onChange={(e) =>
+                                setPasswordInputs((prev) => ({ ...prev, currentPassword: e.target.value }))
+                            }
+                            placeholder="Current password"
+                            autoComplete="current-password"
+                            className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                        />
+                        <input
+                            type="password"
+                            value={passwordInputs.newPassword}
+                            onChange={(e) =>
+                                setPasswordInputs((prev) => ({ ...prev, newPassword: e.target.value }))
+                            }
+                            placeholder="New password"
+                            autoComplete="new-password"
+                            className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                        />
+                        <input
+                            type="password"
+                            value={passwordInputs.confirmPassword}
+                            onChange={(e) =>
+                                setPasswordInputs((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                            }
+                            placeholder="Confirm password"
+                            autoComplete="new-password"
+                            className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                        />
+                        <p className="text-[11px] text-[#86868b]">Minimum 8 characters.</p>
+                        {passwordError && (
+                            <p className="text-[12px] text-[#ff3b30] font-medium">{passwordError}</p>
+                        )}
+                        {passwordSuccess && (
+                            <p className="text-[12px] text-[#1db32e] font-medium">{passwordSuccess}</p>
+                        )}
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowPasswordForm(false)}
+                                className="w-full rounded-xl border border-[#d2d2d7] bg-white text-black py-2.5 text-[13px] font-semibold hover:bg-[#fafafa] transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleChangePassword}
+                                disabled={passwordSaving}
+                                className="w-full rounded-xl bg-black text-white py-2.5 text-[13px] font-semibold hover:bg-[#1d1d1f] transition-all disabled:opacity-50"
+                            >
+                                {passwordSaving ? "Updating..." : "Update Password"}
+                            </button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </section>
+    );
+
+    const renderHeader = (isEditing: boolean, variant: "page" | "modal") => {
+        const headerSpacing = variant === "modal" ? "mb-8" : "mb-12";
+        return (
+            <header className={`flex flex-col md:flex-row md:items-end justify-between gap-6 ${headerSpacing}`}>
+                <div className="flex items-center gap-6">
+                    <div className="relative group group-hover:cursor-pointer">
+                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] overflow-hidden bg-white border border-[#f0f0f0] shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:border-gray-300">
+                            {profile.personal_img_url ? (
+                                <img
+                                    src={profile.personal_img_url}
+                                    alt={`${profile.first_name} ${profile.last_name}`.trim()}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-[#f9f9fb]">
+                                    <User size={40} className="text-[#d2d2d7]" />
+                                </div>
+                            )}
+                        </div>
+                        <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={handleAvatarChange}
+                            disabled={avatarUploading}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => avatarInputRef.current?.click()}
+                            className={`absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[32px] ${avatarUploading ? "pointer-events-none" : "cursor-pointer"}`}
+                            aria-label="Change profile photo"
+                        >
+                            {avatarUploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="text-white" size={24} />}
+                        </button>
+                    </div>
+                    <div>
+                        <motion.h1
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="text-[32px] md:text-[40px] font-semibold text-black tracking-tight leading-tight"
+                        >
+                            {[profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() || "Name not set"}
+                        </motion.h1>
+                        <motion.p
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="text-[17px] md:text-[19px] text-[#86868b] font-medium mt-1"
+                        >
+                            {profile.job_title || "Professional Freelancer"}
+                        </motion.p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <AnimatePresence mode="wait">
+                        {isEditing ? (
+                            <motion.div
+                                key="edit-actions"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="flex items-center gap-3"
+                            >
+                                <button
+                                    onClick={() => setEditMode(false)}
+                                    className="px-6 py-2.5 rounded-full bg-white border border-[#d2d2d7] text-black text-[14px] font-semibold hover:bg-[#fafafa] transition-all cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                    Save Changes
+                                </button>
+                            </motion.div>
+                        ) : (
+                            <motion.button
+                                key="edit-trigger"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                onClick={() => setEditMode(true)}
+                                className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] hover:-translate-y-0.5 hover:shadow-md transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                            >
+                                <Edit3 size={16} />
+                                Edit Profile
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </header>
+        );
+    };
+
+    const renderFeedback = (show: boolean) => {
+        if (!show) return null;
+        return (
+            <AnimatePresence>
+                {errorMsg && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-8 p-4 bg-[#fff1f1] border border-[#ff3b30]/10 rounded-2xl flex items-center gap-3 text-[#ff3b30] text-[14px] font-medium"
+                    >
+                        <X size={18} />
+                        {errorMsg}
+                    </motion.div>
+                )}
+                {successMsg && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-8 p-4 bg-[#f2faf3] border border-[#1db32e]/10 rounded-2xl flex items-center gap-3 text-[#1db32e] text-[14px] font-medium"
+                    >
+                        <Save size={18} />
+                        {successMsg}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        );
+    };
+
+    const renderProfileGrid = (isEditing: boolean) => (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Profile Details */}
+            <div className="lg:col-span-2 space-y-8">
+                {/* About / Bio */}
+                <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
+                            <User size={20} className="text-black" />
+                        </div>
+                        <h2 className="text-[21px] font-semibold text-black tracking-tight">About</h2>
+                    </div>
+
+                    {isEditing ? (
+                        <textarea
+                            rows={6}
+                            className="w-full bg-[#f9f9fb] rounded-2xl border border-[#ebebeb] p-4 text-[16px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all resize-none"
+                            value={profile.bio}
+                            onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+                            placeholder="Tell us about yourself..."
+                        />
+                    ) : (
+                        <p className="text-[17px] text-[#424245] leading-relaxed whitespace-pre-wrap">
+                            {profile.bio || "No bio added yet."}
+                        </p>
+                    )}
+                </section>
+
+                {/* Skills */}
+                <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
+                            <Code size={20} className="text-black" />
+                        </div>
+                        <h2 className="text-[21px] font-semibold text-black tracking-tight">Skills & Expertise</h2>
+                    </div>
+
+                    {isEditing ? (
+                        <div className="space-y-4">
+                            <input
+                                type="text"
+                                className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-3 text-[16px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                value={profile.skills}
+                                onChange={(e) => setProfile(prev => ({ ...prev, skills: e.target.value }))}
+                                placeholder="e.g. Design, React, Node.js"
+                            />
+                            <p className="text-[13px] text-[#86868b]">Separate skills with commas</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {profile.skills ? profile.skills.split(",").map((skill, i) => (
+                                <span
+                                    key={i}
+                                    className="px-4 py-2 bg-[#f5f5f7] hover:bg-[#ebebeb] text-black text-[14px] font-medium rounded-full transition-colors cursor-default"
+                                >
+                                    {skill.trim()}
+                                </span>
+                            )) : (
+                                <span className="text-[#86868b] italic">No skills added yet.</span>
+                            )}
+                        </div>
+                    )}
+                </section>
+
+                {/* Contact Info */}
+                <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
+                    <h3 className="text-[17px] font-semibold text-black mb-6">Contact Information</h3>
+
+                    <div className="space-y-6">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center shrink-0">
+                                <Mail size={18} className="text-[#86868b]" />
+                            </div>
+                            <div>
+                                <p className="text-[13px] font-bold text-[#86868b] uppercase tracking-wider mb-0.5">Email</p>
+                                <p className="text-[15px] text-black font-semibold break-all">{profile.email}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center shrink-0">
+                                <Phone size={18} className="text-[#86868b]" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[13px] font-bold text-[#86868b] uppercase tracking-wider mb-0.5">Phone</p>
+                                {isEditing ? (
+                                    <input
+                                        type="tel"
+                                        className="w-full bg-[#f9f9fb] rounded-lg border border-[#ebebeb] px-3 py-1.5 text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                        value={profile.phone_number}
+                                        onChange={(e) => setProfile(prev => ({ ...prev, phone_number: e.target.value }))}
+                                        placeholder="+20 ..."
+                                    />
+                                ) : (
+                                    <p className="text-[15px] text-black font-semibold">{profile.phone_number || "Not provided"}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {/* Right Column - Account Settings */}
+            <div className="space-y-8">
+                {renderSecuritySection()}
+            </div>
+        </div>
+    );
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#fafafa]">
@@ -335,321 +649,30 @@ export default function FreelancerProfilePage() {
         <div className="flex min-h-screen bg-[#fafafa]">
             <FreelancerSidebar onSignOut={handleSignOut} />
 
-            <main className="flex-1 ml-64 p-8 lg:p-12">
-                <div className="max-w-4xl mx-auto">
-                    {/* Header Section */}
-                    <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-                        <div className="flex items-center gap-6">
-                            <div className="relative group group-hover:cursor-pointer">
-                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-[32px] overflow-hidden bg-white border border-[#f0f0f0] shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:border-gray-300">
-                                    {profile.personal_img_url ? (
-                                        <img
-                                            src={profile.personal_img_url}
-                                            alt={`${profile.first_name} ${profile.last_name}`.trim()}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-[#f9f9fb]">
-                                            <User size={40} className="text-[#d2d2d7]" />
-                                        </div>
-                                    )}
+            <main className={`flex-1 ml-64 p-8 lg:p-12 ${editMode ? "relative overflow-hidden" : ""}`}>
+                <div className={`max-w-4xl mx-auto transition-all duration-300 ${editMode ? "pointer-events-none select-none opacity-60" : ""}`}>
+                    {renderHeader(false, "page")}
+                    {renderFeedback(!editMode)}
+                    {renderProfileGrid(false)}
+                </div>
+
+                {editMode && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+                        <div
+                            className="absolute inset-0 bg-black/35 backdrop-blur-sm"
+                            onClick={() => setEditMode(false)}
+                        />
+                        <div className="relative w-full max-w-5xl" role="dialog" aria-modal="true" aria-label="Edit profile">
+                            <div className="rounded-[36px] border border-white/40 bg-white/60 shadow-[0_30px_80px_rgba(15,15,15,0.25)] backdrop-blur-2xl">
+                                <div className="max-h-[85vh] overflow-y-auto p-8 lg:p-10">
+                                    {renderHeader(true, "modal")}
+                                    {renderFeedback(true)}
+                                    {renderProfileGrid(true)}
                                 </div>
-                                <input
-                                    ref={avatarInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    className="sr-only"
-                                    onChange={handleAvatarChange}
-                                    disabled={avatarUploading}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => avatarInputRef.current?.click()}
-                                    className={`absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[32px] ${avatarUploading ? "pointer-events-none" : "cursor-pointer"}`}
-                                    aria-label="Change profile photo"
-                                >
-                                    {avatarUploading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Camera className="text-white" size={24} />}
-                                </button>
                             </div>
-                            <div>
-                                <motion.h1
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="text-[32px] md:text-[40px] font-semibold text-black tracking-tight leading-tight"
-                                >
-                                    {[profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() || "Name not set"}
-                                </motion.h1>
-                                <motion.p
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                    className="text-[17px] md:text-[19px] text-[#86868b] font-medium mt-1"
-                                >
-                                    {profile.job_title || "Professional Freelancer"}
-                                </motion.p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <AnimatePresence mode="wait">
-                                {editMode ? (
-                                    <motion.div
-                                        key="edit-actions"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="flex items-center gap-3"
-                                    >
-                                        <button
-                                            onClick={() => setEditMode(false)}
-                                            className="px-6 py-2.5 rounded-full bg-white border border-[#d2d2d7] text-black text-[14px] font-semibold hover:bg-[#fafafa] transition-all cursor-pointer"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleSave}
-                                            disabled={saving}
-                                            className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                            Save Changes
-                                        </button>
-                                    </motion.div>
-                                ) : (
-                                    <motion.button
-                                        key="edit-trigger"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        onClick={() => setEditMode(true)}
-                                        className="px-6 py-2.5 rounded-full bg-black text-white text-[14px] font-semibold hover:bg-[#1d1d1f] hover:-translate-y-0.5 hover:shadow-md transition-all flex items-center gap-2 shadow-sm cursor-pointer"
-                                    >
-                                        <Edit3 size={16} />
-                                        Edit Profile
-                                    </motion.button>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </header>
-
-                    {/* Feedback Messages */}
-                    <AnimatePresence>
-                        {errorMsg && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="mb-8 p-4 bg-[#fff1f1] border border-[#ff3b30]/10 rounded-2xl flex items-center gap-3 text-[#ff3b30] text-[14px] font-medium"
-                            >
-                                <X size={18} />
-                                {errorMsg}
-                            </motion.div>
-                        )}
-                        {successMsg && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="mb-8 p-4 bg-[#f2faf3] border border-[#1db32e]/10 rounded-2xl flex items-center gap-3 text-[#1db32e] text-[14px] font-medium"
-                            >
-                                <Save size={18} />
-                                {successMsg}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Content Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column - Main Info */}
-                        <div className="lg:col-span-2 space-y-8">
-                            {/* About / Bio */}
-                            <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
-                                        <User size={20} className="text-black" />
-                                    </div>
-                                    <h2 className="text-[21px] font-semibold text-black tracking-tight">About</h2>
-                                </div>
-
-                                {editMode ? (
-                                    <textarea
-                                        rows={6}
-                                        className="w-full bg-[#f9f9fb] rounded-2xl border border-[#ebebeb] p-4 text-[16px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all resize-none"
-                                        value={profile.bio}
-                                        onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-                                        placeholder="Tell us about yourself..."
-                                    />
-                                ) : (
-                                    <p className="text-[17px] text-[#424245] leading-relaxed whitespace-pre-wrap">
-                                        {profile.bio || "No bio added yet."}
-                                    </p>
-                                )}
-                            </section>
-
-                            {/* Skills */}
-                            <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
-                                        <Code size={20} className="text-black" />
-                                    </div>
-                                    <h2 className="text-[21px] font-semibold text-black tracking-tight">Skills & Expertise</h2>
-                                </div>
-
-                                {editMode ? (
-                                    <div className="space-y-4">
-                                        <input
-                                            type="text"
-                                            className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-3 text-[16px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                                            value={profile.skills}
-                                            onChange={(e) => setProfile(prev => ({ ...prev, skills: e.target.value }))}
-                                            placeholder="e.g. Design, React, Node.js"
-                                        />
-                                        <p className="text-[13px] text-[#86868b]">Separate skills with commas</p>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-wrap gap-2">
-                                        {profile.skills ? profile.skills.split(",").map((skill, i) => (
-                                            <span
-                                                key={i}
-                                                className="px-4 py-2 bg-[#f5f5f7] hover:bg-[#ebebeb] text-black text-[14px] font-medium rounded-full transition-colors cursor-default"
-                                            >
-                                                {skill.trim()}
-                                            </span>
-                                        )) : (
-                                            <span className="text-[#86868b] italic">No skills added yet.</span>
-                                        )}
-                                    </div>
-                                )}
-                            </section>
-                        </div>
-
-                        {/* Right Column - Sidebar Info */}
-                        <div className="space-y-8">
-                            {/* Contact Info */}
-                            <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
-                                <h3 className="text-[17px] font-semibold text-black mb-6">Contact Information</h3>
-
-                                <div className="space-y-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center shrink-0">
-                                            <Mail size={18} className="text-[#86868b]" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[13px] font-bold text-[#86868b] uppercase tracking-wider mb-0.5">Email</p>
-                                            <p className="text-[15px] text-black font-semibold break-all">{profile.email}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center shrink-0">
-                                            <Phone size={18} className="text-[#86868b]" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-[13px] font-bold text-[#86868b] uppercase tracking-wider mb-0.5">Phone</p>
-                                            {editMode ? (
-                                                <input
-                                                    type="tel"
-                                                    className="w-full bg-[#f9f9fb] rounded-lg border border-[#ebebeb] px-3 py-1.5 text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                                                    value={profile.phone_number}
-                                                    onChange={(e) => setProfile(prev => ({ ...prev, phone_number: e.target.value }))}
-                                                    placeholder="+20 ..."
-                                                />
-                                            ) : (
-                                                <p className="text-[15px] text-black font-semibold">{profile.phone_number || "Not provided"}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* Security */}
-                            <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
-                                        <Shield size={18} className="text-black" />
-                                    </div>
-                                    <h3 className="text-[17px] font-semibold text-black">Security</h3>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <input
-                                        type="password"
-                                        value={passwordInputs.currentPassword}
-                                        onChange={(e) =>
-                                            setPasswordInputs((prev) => ({ ...prev, currentPassword: e.target.value }))
-                                        }
-                                        placeholder="Current password"
-                                        autoComplete="current-password"
-                                        className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                                    />
-                                    <input
-                                        type="password"
-                                        value={passwordInputs.newPassword}
-                                        onChange={(e) =>
-                                            setPasswordInputs((prev) => ({ ...prev, newPassword: e.target.value }))
-                                        }
-                                        placeholder="New password"
-                                        autoComplete="new-password"
-                                        className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                                    />
-                                    <input
-                                        type="password"
-                                        value={passwordInputs.confirmPassword}
-                                        onChange={(e) =>
-                                            setPasswordInputs((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                                        }
-                                        placeholder="Confirm password"
-                                        autoComplete="new-password"
-                                        className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                                    />
-                                    <p className="text-[11px] text-[#86868b]">Minimum 8 characters.</p>
-                                    {passwordError && (
-                                        <p className="text-[12px] text-[#ff3b30] font-medium">{passwordError}</p>
-                                    )}
-                                    {passwordSuccess && (
-                                        <p className="text-[12px] text-[#1db32e] font-medium">{passwordSuccess}</p>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={handleChangePassword}
-                                        disabled={passwordSaving}
-                                        className="w-full rounded-xl bg-black text-white py-2.5 text-[13px] font-semibold hover:bg-[#1d1d1f] transition-all disabled:opacity-50"
-                                    >
-                                        {passwordSaving ? "Updating..." : "Update Password"}
-                                    </button>
-                                </div>
-                            </section>
-
-                            {/* Social / Portfolio Placeholder */}
-                            <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
-                                <h3 className="text-[17px] font-semibold text-black mb-6">Links</h3>
-                                <div className="space-y-3">
-                                    <button className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-[#f5f5f7] transition-all group">
-                                        <div className="flex items-center gap-3">
-                                            <Github size={20} className="text-[#86868b] group-hover:text-black transition-colors" />
-                                            <span className="text-[15px] text-[#1d1d1f] font-medium">GitHub</span>
-                                        </div>
-                                        <ChevronRight size={16} className="text-[#d2d2d7]" />
-                                    </button>
-                                    <button className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-[#f5f5f7] transition-all group">
-                                        <div className="flex items-center gap-3">
-                                            <Globe size={20} className="text-[#86868b] group-hover:text-black transition-colors" />
-                                            <span className="text-[15px] text-[#1d1d1f] font-medium">Portfolio</span>
-                                        </div>
-                                        <ChevronRight size={16} className="text-[#d2d2d7]" />
-                                    </button>
-                                    <button className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-[#f5f5f7] transition-all group">
-                                        <div className="flex items-center gap-3">
-                                            <Twitter size={20} className="text-[#86868b] group-hover:text-black transition-colors" />
-                                            <span className="text-[15px] text-[#1d1d1f] font-medium">Twitter</span>
-                                        </div>
-                                        <ChevronRight size={16} className="text-[#d2d2d7]" />
-                                    </button>
-                                </div>
-                            </section>
                         </div>
                     </div>
-                </div>
+                )}
             </main>
 
             <ImageCropperModal

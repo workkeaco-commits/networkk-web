@@ -44,9 +44,9 @@ export default function FreelancerSidebar({ onSignOut }) {
             <div className={`p-8 mb-4 overflow-hidden whitespace-nowrap`}>
                 <div className="flex items-center">
                     <img
-                        src="/logo-sf-display.png"
+                        src={isCollapsed ? "/favicon.ico" : "/logo-sf-display.png"}
                         alt="networkk"
-                        className={`h-9 transition-all duration-300 ${isCollapsed ? "w-8 object-left overflow-hidden" : "w-auto"}`}
+                        className={`h-9 transition-all duration-300 ${isCollapsed ? "w-9 object-contain" : "w-auto"}`}
                     />
                 </div>
             </div>
