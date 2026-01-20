@@ -11,6 +11,7 @@ type FreelancerRow = {
     last_name: string | null;
     personal_img_url: string | null;
     job_title: string | null;
+    bio: string | null;
     skills: string | null; // comma-separated
     category_id: number | null;
     created_at: string;
@@ -65,6 +66,8 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
     const [sending, setSending] = useState(false);
     const [messageError, setMessageError] = useState("");
     const [messageSuccess, setMessageSuccess] = useState("");
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [profileFreelancer, setProfileFreelancer] = useState<FreelancerRow | null>(null);
 
     const [invitedFreelancers, setInvitedFreelancers] = useState<Set<number>>(new Set());
     const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
@@ -184,6 +187,16 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
         setMessageError("");
         setMessageSuccess("");
         setMessageModalOpen(true);
+    }
+
+    function openProfileModal(f: FreelancerRow) {
+        setProfileFreelancer(f);
+        setProfileModalOpen(true);
+    }
+
+    function closeProfileModal() {
+        setProfileModalOpen(false);
+        setProfileFreelancer(null);
     }
 
     function closeMessageModal() {
@@ -458,9 +471,13 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openProfileModal(f)}
+                                                            className="text-left font-bold text-gray-900 group-hover:text-[#10b8a6] transition-colors truncate"
+                                                        >
                                                             {name}
-                                                        </h4>
+                                                        </button>
                                                         <p className="text-xs font-medium text-gray-500 truncate mb-2">
                                                             {f.job_title || "Freelancer"}
                                                         </p>
@@ -507,6 +524,102 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                 </div>
                             )}
                         </div>
+
+                        {/* Freelancer Profile Modal */}
+                        <AnimatePresence>
+                            {profileModalOpen && profileFreelancer && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-sm p-6"
+                                    onClick={closeProfileModal}
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.95, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0.95, opacity: 0 }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        role="dialog"
+                                        aria-modal="true"
+                                        aria-label="Freelancer profile"
+                                        className="w-full max-w-lg rounded-[32px] border border-white/40 bg-white/70 shadow-[0_30px_80px_rgba(15,15,15,0.25)] backdrop-blur-2xl p-6"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-white/70 flex-shrink-0 overflow-hidden flex items-center justify-center text-gray-600 font-bold border border-white/60">
+                                                    {profileFreelancer.personal_img_url ? (
+                                                        <img
+                                                            src={profileFreelancer.personal_img_url}
+                                                            alt={displayFreelancerName(profileFreelancer)}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        initials(displayFreelancerName(profileFreelancer))
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-gray-900">
+                                                        {displayFreelancerName(profileFreelancer)}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        {profileFreelancer.job_title || "Freelancer"}
+                                                    </p>
+                                                    {profileFreelancer.created_at && (
+                                                        <p className="text-[11px] text-gray-400 mt-1">
+                                                            Member since{" "}
+                                                            {new Date(profileFreelancer.created_at).toLocaleDateString()}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={closeProfileModal}
+                                                className="w-8 h-8 rounded-full bg-white/70 border border-white/60 flex items-center justify-center text-gray-400 hover:text-black hover:bg-white transition-all"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-6 space-y-5">
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                                                    About
+                                                </p>
+                                                <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                                    {profileFreelancer.bio?.trim() || "No bio provided yet."}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                                                    Skills
+                                                </p>
+                                                {profileFreelancer.skills ? (
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        {profileFreelancer.skills
+                                                            .split(",")
+                                                            .map((s) => s.trim())
+                                                            .filter(Boolean)
+                                                            .map((s, i) => (
+                                                                <span
+                                                                    key={`${s}-${i}`}
+                                                                    className="rounded-full bg-white/80 border border-white/70 px-3 py-1 text-[11px] font-semibold text-gray-600"
+                                                                >
+                                                                    {s}
+                                                                </span>
+                                                            ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-2 text-sm text-gray-500">No skills listed.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Nested Message Modal */}
                         <AnimatePresence>
