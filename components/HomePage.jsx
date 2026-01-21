@@ -42,6 +42,7 @@ export default function HomePage() {
       const { data, error } = await supabase
         .from("freelancers")
         .select("freelancer_id, first_name, last_name, job_title, personal_img_url, skills")
+        .eq("approval_status", "approved")
         .not("personal_img_url", "is", null)
         .limit(8);
 

@@ -17,6 +17,34 @@ type FreelancerRow = {
     created_at: string;
 };
 
+type FreelancerProject = {
+    project_id: number;
+    project_name: string | null;
+    project_description: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    project_url: string | null;
+};
+
+type FreelancerCertificate = {
+    certificate_id: number;
+    name: string | null;
+    issuer: string | null;
+    issue_date: string | null;
+    expiry_date: string | null;
+    credential_id: string | null;
+    credential_url: string | null;
+};
+
+type FreelancerEducation = {
+    education_id: number;
+    school: string | null;
+    degree: string | null;
+    field_of_study: string | null;
+    start_date: string | null;
+    end_date: string | null;
+};
+
 type ClientRow = {
     client_id: number;
     first_name: string | null;
@@ -52,6 +80,28 @@ function displayClientName(c: ClientRow | null) {
     return name || c.company_name || `Client #${c.client_id}`;
 }
 
+function formatProjectMonth(value?: string | null) {
+    if (!value) return "";
+    const [year, month] = String(value).slice(0, 7).split("-");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const label = months[Number(month) - 1] || value;
+    return `${label} ${year}`;
+}
+
+function formatProjectRange(start?: string | null, end?: string | null) {
+    if (!start && !end) return "";
+    const startLabel = start ? formatProjectMonth(start) : "—";
+    const endLabel = end ? formatProjectMonth(end) : "Present";
+    return `${startLabel} - ${endLabel}`;
+}
+
+function formatCertificateDates(issue?: string | null, expiry?: string | null) {
+    const parts = [];
+    if (issue) parts.push(`Issued ${formatProjectMonth(issue)}`);
+    if (expiry) parts.push(`Expires ${formatProjectMonth(expiry)}`);
+    return parts.join(" | ");
+}
+
 export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModalProps) {
     const [loading, setLoading] = useState(true);
     const [rows, setRows] = useState<FreelancerRow[]>([]);
@@ -68,6 +118,10 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
     const [messageSuccess, setMessageSuccess] = useState("");
     const [profileModalOpen, setProfileModalOpen] = useState(false);
     const [profileFreelancer, setProfileFreelancer] = useState<FreelancerRow | null>(null);
+    const [profileProjects, setProfileProjects] = useState<FreelancerProject[]>([]);
+    const [profileCertificates, setProfileCertificates] = useState<FreelancerCertificate[]>([]);
+    const [profileEducation, setProfileEducation] = useState<FreelancerEducation[]>([]);
+    const [profileDetailsLoading, setProfileDetailsLoading] = useState(false);
 
     const [invitedFreelancers, setInvitedFreelancers] = useState<Set<number>>(new Set());
     const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
@@ -192,11 +246,41 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
     function openProfileModal(f: FreelancerRow) {
         setProfileFreelancer(f);
         setProfileModalOpen(true);
+        void loadProfileDetails(f.freelancer_id);
     }
 
     function closeProfileModal() {
         setProfileModalOpen(false);
         setProfileFreelancer(null);
+        setProfileProjects([]);
+        setProfileCertificates([]);
+        setProfileEducation([]);
+    }
+
+    async function loadProfileDetails(freelancerId: number) {
+        setProfileDetailsLoading(true);
+        setProfileProjects([]);
+        setProfileCertificates([]);
+        setProfileEducation([]);
+        try {
+            const res = await fetch(`/api/freelancers/${freelancerId}/profile`, {
+                cache: "no-store",
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json?.error || "Failed to load freelancer profile details");
+            }
+            setProfileProjects(json.projects || []);
+            setProfileCertificates(json.certificates || []);
+            setProfileEducation(json.education || []);
+        } catch (err) {
+            console.error("Failed to load freelancer profile details", err);
+            setProfileProjects([]);
+            setProfileCertificates([]);
+            setProfileEducation([]);
+        } finally {
+            setProfileDetailsLoading(false);
+        }
     }
 
     function closeMessageModal() {
@@ -532,7 +616,7 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-sm p-6"
+                                    className="absolute inset-0 z-30 flex items-start justify-center bg-black/30 backdrop-blur-sm p-6 overflow-y-auto"
                                     onClick={closeProfileModal}
                                 >
                                     <motion.div
@@ -543,7 +627,7 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                         role="dialog"
                                         aria-modal="true"
                                         aria-label="Freelancer profile"
-                                        className="w-full max-w-lg rounded-[32px] border border-white/40 bg-white/70 shadow-[0_30px_80px_rgba(15,15,15,0.25)] backdrop-blur-2xl p-6"
+                                        className="w-full max-w-lg rounded-[32px] border border-white/40 bg-white/70 shadow-[0_30px_80px_rgba(15,15,15,0.25)] backdrop-blur-2xl p-6 max-h-[85vh] overflow-y-auto"
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="flex items-start gap-4">
@@ -613,6 +697,149 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                                     </div>
                                                 ) : (
                                                     <p className="mt-2 text-sm text-gray-500">No skills listed.</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                                                    Projects
+                                                </p>
+                                                {profileDetailsLoading ? (
+                                                    <p className="mt-2 text-sm text-gray-500">Loading projects...</p>
+                                                ) : profileProjects.length ? (
+                                                    <div className="mt-3 space-y-3">
+                                                        {profileProjects.map((project, index) => {
+                                                            const range = formatProjectRange(
+                                                                project.start_date,
+                                                                project.end_date
+                                                            );
+                                                            return (
+                                                                <div
+                                                                    key={`${project.project_name || "project"}-${index}`}
+                                                                    className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3"
+                                                                >
+                                                                    <p className="text-sm font-semibold text-gray-900">
+                                                                        {project.project_name || "Untitled project"}
+                                                                    </p>
+                                                                    {range && (
+                                                                        <p className="text-[11px] text-gray-400 mt-1">
+                                                                            {range}
+                                                                        </p>
+                                                                    )}
+                                                                    <p className="text-xs text-gray-600 mt-2 whitespace-pre-wrap">
+                                                                        {project.project_description || "No description provided."}
+                                                                    </p>
+                                                                    {project.project_url && (
+                                                                        <a
+                                                                            href={project.project_url}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="mt-2 inline-flex text-[11px] font-semibold text-[#10b8a6] hover:underline"
+                                                                        >
+                                                                            View project
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-2 text-sm text-gray-500">No projects listed.</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                                                    Certificates
+                                                </p>
+                                                {profileDetailsLoading ? (
+                                                    <p className="mt-2 text-sm text-gray-500">Loading certificates...</p>
+                                                ) : profileCertificates.length ? (
+                                                    <div className="mt-3 space-y-3">
+                                                        {profileCertificates.map((cert) => {
+                                                            const meta = formatCertificateDates(
+                                                                cert.issue_date,
+                                                                cert.expiry_date
+                                                            );
+                                                            return (
+                                                                <div
+                                                                    key={cert.certificate_id}
+                                                                    className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3"
+                                                                >
+                                                                    <p className="text-sm font-semibold text-gray-900">
+                                                                        {cert.name || "Certificate"}
+                                                                    </p>
+                                                                    {(cert.issuer || meta) && (
+                                                                        <p className="text-[11px] text-gray-400 mt-1">
+                                                                            {[cert.issuer, meta].filter(Boolean).join(" | ")}
+                                                                        </p>
+                                                                    )}
+                                                                    {(cert.credential_id || cert.credential_url) && (
+                                                                        <div className="mt-2 text-[11px] text-gray-500 space-y-1">
+                                                                            {cert.credential_id && (
+                                                                                <p>Credential ID: {cert.credential_id}</p>
+                                                                            )}
+                                                                            {cert.credential_url && (
+                                                                                <a
+                                                                                    href={cert.credential_url}
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    className="inline-flex text-[#10b8a6] hover:underline"
+                                                                                >
+                                                                                    View credential
+                                                                                </a>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-2 text-sm text-gray-500">No certificates listed.</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                                                    Education
+                                                </p>
+                                                {profileDetailsLoading ? (
+                                                    <p className="mt-2 text-sm text-gray-500">Loading education...</p>
+                                                ) : profileEducation.length ? (
+                                                    <div className="mt-3 space-y-3">
+                                                        {profileEducation.map((edu) => {
+                                                            const range = formatProjectRange(
+                                                                edu.start_date,
+                                                                edu.end_date
+                                                            );
+                                                            const detail = [edu.degree, edu.field_of_study]
+                                                                .filter(Boolean)
+                                                                .join(" | ");
+                                                            return (
+                                                                <div
+                                                                    key={edu.education_id}
+                                                                    className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3"
+                                                                >
+                                                                    <p className="text-sm font-semibold text-gray-900">
+                                                                        {edu.school || "Education"}
+                                                                    </p>
+                                                                    {detail && (
+                                                                        <p className="text-[11px] text-gray-400 mt-1">
+                                                                            {detail}
+                                                                        </p>
+                                                                    )}
+                                                                    {range && (
+                                                                        <p className="text-[11px] text-gray-400 mt-1">
+                                                                            {range}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-2 text-sm text-gray-500">No education listed.</p>
                                                 )}
                                             </div>
                                         </div>

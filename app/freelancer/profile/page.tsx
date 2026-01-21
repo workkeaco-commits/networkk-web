@@ -9,6 +9,7 @@ import {
     Mail,
     Phone,
     Code,
+    Briefcase,
     Edit3,
     Save,
     X,
@@ -34,6 +35,14 @@ export default function FreelancerProfilePage() {
         personal_img_url: string | null;
     };
 
+    type FreelancerProject = {
+        id: number;
+        name: string;
+        summary: string;
+        start: string;
+        end: string;
+    };
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -51,6 +60,7 @@ export default function FreelancerProfilePage() {
         confirmPassword: "",
     });
     const avatarInputRef = useRef<HTMLInputElement | null>(null);
+    const projectIdRef = useRef(0);
 
     const [profile, setProfile] = useState<FreelancerProfile>({
         freelancer_id: null,
@@ -63,6 +73,8 @@ export default function FreelancerProfilePage() {
         skills: "",
         personal_img_url: null
     });
+    const [projects, setProjects] = useState<FreelancerProject[]>([]);
+    const [projectsReady, setProjectsReady] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -89,6 +101,8 @@ export default function FreelancerProfilePage() {
             if (error || !data) {
                 console.error("Error loading freelancer profile", error);
                 setErrorMsg("Could not load your profile. Please complete signup.");
+                setProjects([]);
+                setProjectsReady(false);
             } else {
                 setProfile({
                     freelancer_id: data.freelancer_id,
@@ -105,6 +119,31 @@ export default function FreelancerProfilePage() {
                             ? data.skills.join(", ")
                             : "",
                 });
+
+                const { data: projectRows, error: projectErr } = await supabase
+                    .from("freelancer_projects")
+                    .select("project_name, project_description, start_date, end_date")
+                    .eq("freelancer_id", data.freelancer_id)
+                    .order("start_date", { ascending: false });
+
+                if (!mounted) return;
+
+                if (projectErr) {
+                    console.error("Error loading freelancer projects", projectErr);
+                    setProjects([]);
+                    setProjectsReady(false);
+                } else {
+                    projectIdRef.current = 0;
+                    const normalizedProjects = (projectRows || []).map((row) => ({
+                        id: projectIdRef.current++,
+                        name: row.project_name || "",
+                        summary: row.project_description || "",
+                        start: row.start_date ? String(row.start_date).slice(0, 7) : "",
+                        end: row.end_date ? String(row.end_date).slice(0, 7) : "",
+                    }));
+                    setProjects(normalizedProjects);
+                    setProjectsReady(true);
+                }
             }
 
             setLoading(false);
@@ -114,6 +153,29 @@ export default function FreelancerProfilePage() {
             mounted = false;
         };
     }, [router]);
+
+    const formatProjectMonth = (value: string) => {
+        if (!value) return "";
+        const [year, month] = value.split("-");
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const label = months[Number(month) - 1] || value;
+        return `${label} ${year}`;
+    };
+
+    const formatProjectRange = (start: string, end: string) => {
+        if (!start && !end) return "";
+        const startLabel = start ? formatProjectMonth(start) : "—";
+        const endLabel = end ? formatProjectMonth(end) : "Present";
+        return `${startLabel} - ${endLabel}`;
+    };
+
+    const createEmptyProject = (): FreelancerProject => ({
+        id: projectIdRef.current++,
+        name: "",
+        summary: "",
+        start: "",
+        end: "",
+    });
 
     const isHeicFile = (file: File | null) => {
         if (!file) return false;
@@ -223,6 +285,19 @@ export default function FreelancerProfilePage() {
 
     const handleAvatarCropCancel = () => setAvatarCrop(null);
 
+    const handleAddProject = () => {
+        setProjectsReady(true);
+        setProjects((prev) => [...prev, createEmptyProject()]);
+    };
+
+    const handleRemoveProject = (id: number) => {
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+    };
+
+    const handleProjectChange = (id: number, patch: Partial<FreelancerProject>) => {
+        setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    };
+
     async function handleSave() {
         if (!profile?.freelancer_id) return;
 
@@ -248,6 +323,44 @@ export default function FreelancerProfilePage() {
             if (error) {
                 setErrorMsg(error.message || "Failed to save changes.");
                 return;
+            }
+
+            if (projectsReady) {
+                const trimmedProjects = projects
+                    .map((project) => ({
+                        name: project.name.trim(),
+                        summary: project.summary.trim(),
+                        start: project.start.trim(),
+                        end: project.end.trim(),
+                    }))
+                    .filter((project) => project.name || project.summary || project.start || project.end);
+
+                const { error: deleteError } = await supabase
+                    .from("freelancer_projects")
+                    .delete()
+                    .eq("freelancer_id", profile.freelancer_id);
+
+                if (deleteError) {
+                    throw new Error(deleteError.message || "Failed to update projects.");
+                }
+
+                if (trimmedProjects.length) {
+                    const rows = trimmedProjects.map((project) => ({
+                        freelancer_id: profile.freelancer_id,
+                        project_name: project.name || "",
+                        project_description: project.summary || "",
+                        start_date: project.start ? `${project.start}-01` : null,
+                        end_date: project.end ? `${project.end}-01` : null,
+                    }));
+
+                    const { error: insertError } = await supabase
+                        .from("freelancer_projects")
+                        .insert(rows);
+
+                    if (insertError) {
+                        throw new Error(insertError.message || "Failed to update projects.");
+                    }
+                }
             }
 
             setSuccessMsg("Profile updated successfully.");
@@ -587,6 +700,124 @@ export default function FreelancerProfilePage() {
                                 </span>
                             )) : (
                                 <span className="text-[#86868b] italic">No skills added yet.</span>
+                            )}
+                        </div>
+                    )}
+                </section>
+
+                {/* Projects */}
+                <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
+                            <Briefcase size={20} className="text-black" />
+                        </div>
+                        <h2 className="text-[21px] font-semibold text-black tracking-tight">Projects</h2>
+                    </div>
+
+                    {isEditing ? (
+                        <div className="space-y-4">
+                            {projects.length === 0 && (
+                                <p className="text-[13px] text-[#86868b]">No projects added yet.</p>
+                            )}
+                            {projects.map((project) => (
+                                <div
+                                    key={project.id}
+                                    className="rounded-2xl border border-[#ebebeb] bg-[#f9f9fb] p-4 space-y-3"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <input
+                                            type="text"
+                                            value={project.name}
+                                            onChange={(e) =>
+                                                handleProjectChange(project.id, { name: e.target.value })
+                                            }
+                                            placeholder="Project name"
+                                            className="w-full bg-white rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveProject(project.id)}
+                                            className="w-9 h-9 rounded-xl bg-white border border-[#ebebeb] text-[#86868b] hover:text-black hover:border-[#d2d2d7] transition-all"
+                                            aria-label="Remove project"
+                                        >
+                                            <X size={16} className="mx-auto" />
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        rows={3}
+                                        value={project.summary}
+                                        onChange={(e) =>
+                                            handleProjectChange(project.id, { summary: e.target.value })
+                                        }
+                                        placeholder="Project summary"
+                                        className="w-full bg-white rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all resize-none"
+                                    />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider ml-1">
+                                                Start
+                                            </label>
+                                            <input
+                                                type="month"
+                                                value={project.start}
+                                                onChange={(e) =>
+                                                    handleProjectChange(project.id, { start: e.target.value })
+                                                }
+                                                className="mt-2 w-full bg-white rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider ml-1">
+                                                End
+                                            </label>
+                                            <input
+                                                type="month"
+                                                value={project.end}
+                                                onChange={(e) =>
+                                                    handleProjectChange(project.id, { end: e.target.value })
+                                                }
+                                                className="mt-2 w-full bg-white rounded-xl border border-[#ebebeb] px-4 py-2.5 text-[14px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-[11px] text-[#86868b]">Leave end date blank if it is ongoing.</p>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={handleAddProject}
+                                className="w-full rounded-xl border border-[#d2d2d7] bg-white text-black py-2.5 text-[13px] font-semibold hover:bg-[#fafafa] transition-all"
+                            >
+                                Add Project
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {projects.length > 0 ? (
+                                projects.map((project) => (
+                                    <div
+                                        key={project.id}
+                                        className="rounded-2xl border border-[#f5f5f7] bg-[#fafafa] p-4"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <h4 className="text-[16px] font-semibold text-black">
+                                                    {project.name || "Untitled project"}
+                                                </h4>
+                                                {formatProjectRange(project.start, project.end) && (
+                                                    <p className="text-[12px] text-[#86868b] mt-1">
+                                                        {formatProjectRange(project.start, project.end)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className="text-[14px] text-[#424245] mt-2 whitespace-pre-wrap">
+                                            {project.summary || "No description provided."}
+                                        </p>
+                                    </div>
+                                ))
+                            ) : (
+                                <span className="text-[#86868b] italic">No projects added yet.</span>
                             )}
                         </div>
                     )}
