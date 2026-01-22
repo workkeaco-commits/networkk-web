@@ -95,6 +95,11 @@ function formatProjectRange(start?: string | null, end?: string | null) {
     return `${startLabel} - ${endLabel}`;
 }
 
+function formatEducationEndYear(end?: string | null) {
+    if (!end) return "Present";
+    return String(end).slice(0, 4);
+}
+
 function formatCertificateDates(issue?: string | null, expiry?: string | null) {
     const parts = [];
     if (issue) parts.push(`Issued ${formatProjectMonth(issue)}`);
@@ -809,10 +814,7 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                                 ) : profileEducation.length ? (
                                                     <div className="mt-3 space-y-3">
                                                         {profileEducation.map((edu) => {
-                                                            const range = formatProjectRange(
-                                                                edu.start_date,
-                                                                edu.end_date
-                                                            );
+                                                            const endYear = formatEducationEndYear(edu.end_date);
                                                             const detail = [edu.degree, edu.field_of_study]
                                                                 .filter(Boolean)
                                                                 .join(" | ");
@@ -829,9 +831,9 @@ export default function JobInviteModal({ jobId, isOpen, onClose }: JobInviteModa
                                                                             {detail}
                                                                         </p>
                                                                     )}
-                                                                    {range && (
+                                                                    {endYear && (
                                                                         <p className="text-[11px] text-gray-400 mt-1">
-                                                                            {range}
+                                                                            {endYear}
                                                                         </p>
                                                                     )}
                                                                 </div>

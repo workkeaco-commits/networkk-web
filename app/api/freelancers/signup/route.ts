@@ -165,15 +165,26 @@ export async function POST(req: Request) {
     // 6) Education (optional)
     if (payload.education) {
       const ed = payload.education;
-      const { error: eEdu } = await supabaseAdmin.from('freelancer_education').insert({
-        freelancer_id: freelancerId,
-        degree: ed.status === 'degree' ? (ed.degreeType || null) : null,
-        field_of_study: ed.status === 'student' ? (ed.studyProgram || null) : null,
-        end_date: ed.degreeDate ? ed.degreeDate + '-01' : (ed.expectedGradDate ? ed.expectedGradDate + '-01' : null),
-      });
-      if (eEdu) {
-        console.error('[signup] education insert error:', eEdu);
-        return NextResponse.json({ error: { message: eEdu.message } }, { status: 400 });
+      const school = String(ed.school ?? ed.university ?? '').trim();
+      const degree = String(ed.degree ?? ed.degreeType ?? '').trim();
+      const fieldOfStudy = String(ed.major ?? ed.field_of_study ?? ed.studyProgram ?? '').trim();
+      const endDateRaw = String(ed.end_date ?? ed.graduationYear ?? ed.degreeDate ?? ed.expectedGradDate ?? '').trim();
+      const endDate = endDateRaw
+        ? (endDateRaw.includes('-') ? endDateRaw : `${endDateRaw}-01-01`)
+        : null;
+
+      if (school || degree || fieldOfStudy || endDate) {
+        const { error: eEdu } = await supabaseAdmin.from('freelancer_education').insert({
+          freelancer_id: freelancerId,
+          school: school || null,
+          degree: degree || null,
+          field_of_study: fieldOfStudy || null,
+          end_date: endDate,
+        });
+        if (eEdu) {
+          console.error('[signup] education insert error:', eEdu);
+          return NextResponse.json({ error: { message: eEdu.message } }, { status: 400 });
+        }
       }
     }
 

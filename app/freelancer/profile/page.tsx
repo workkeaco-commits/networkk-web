@@ -15,7 +15,8 @@ import {
     X,
     Loader2,
     Camera,
-    Shield
+    Shield,
+    GraduationCap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageCropperModal from "@/components/ImageCropperModal";
@@ -33,6 +34,14 @@ export default function FreelancerProfilePage() {
         phone_number: string;
         skills: string;
         personal_img_url: string | null;
+    };
+
+    type EducationEntry = {
+        education_id: number | null;
+        school: string;
+        degree: string;
+        field_of_study: string;
+        end_date: string | null;
     };
 
     type FreelancerProject = {
@@ -73,6 +82,14 @@ export default function FreelancerProfilePage() {
         skills: "",
         personal_img_url: null
     });
+    const [education, setEducation] = useState<EducationEntry>({
+        education_id: null,
+        school: "",
+        degree: "",
+        field_of_study: "",
+        end_date: null,
+    });
+    const [educationYear, setEducationYear] = useState("");
     const [projects, setProjects] = useState<FreelancerProject[]>([]);
     const [projectsReady, setProjectsReady] = useState(false);
 
@@ -103,6 +120,14 @@ export default function FreelancerProfilePage() {
                 setErrorMsg("Could not load your profile. Please complete signup.");
                 setProjects([]);
                 setProjectsReady(false);
+                setEducation({
+                    education_id: null,
+                    school: "",
+                    degree: "",
+                    field_of_study: "",
+                    end_date: null,
+                });
+                setEducationYear("");
             } else {
                 setProfile({
                     freelancer_id: data.freelancer_id,
@@ -143,6 +168,48 @@ export default function FreelancerProfilePage() {
                     }));
                     setProjects(normalizedProjects);
                     setProjectsReady(true);
+                }
+
+                if (data.freelancer_id) {
+                    const { data: eduRows, error: eduError } = await supabase
+                        .from("freelancer_education")
+                        .select("education_id, school, degree, field_of_study, end_date")
+                        .eq("freelancer_id", data.freelancer_id)
+                        .order("end_date", { ascending: false })
+                        .limit(1);
+
+                    if (!mounted) return;
+
+                    if (eduError) {
+                        console.error("Error loading education", eduError);
+                        setEducation({
+                            education_id: null,
+                            school: "",
+                            degree: "",
+                            field_of_study: "",
+                            end_date: null,
+                        });
+                        setEducationYear("");
+                    } else if (eduRows && eduRows.length) {
+                        const edu = eduRows[0];
+                        setEducation({
+                            education_id: edu.education_id ?? null,
+                            school: edu.school || "",
+                            degree: edu.degree || "",
+                            field_of_study: edu.field_of_study || "",
+                            end_date: edu.end_date || null,
+                        });
+                        setEducationYear(edu.end_date ? String(edu.end_date).slice(0, 4) : "");
+                    } else {
+                        setEducation({
+                            education_id: null,
+                            school: "",
+                            degree: "",
+                            field_of_study: "",
+                            end_date: null,
+                        });
+                        setEducationYear("");
+                    }
                 }
             }
 
@@ -361,6 +428,77 @@ export default function FreelancerProfilePage() {
                         throw new Error(insertError.message || "Failed to update projects.");
                     }
                 }
+            }
+
+            const normalizedEndDate = educationYear ? `${educationYear}-01-01` : null;
+            const educationPayload = {
+                school: education.school.trim() || null,
+                degree: education.degree.trim() || null,
+                field_of_study: education.field_of_study.trim() || null,
+                end_date: normalizedEndDate,
+            };
+            const hasEducation = Object.values(educationPayload).some(Boolean);
+
+            if (hasEducation) {
+                if (education.education_id) {
+                    const { data: updatedEdu, error: eduError } = await supabase
+                        .from("freelancer_education")
+                        .update(educationPayload)
+                        .eq("education_id", education.education_id)
+                        .select("education_id, school, degree, field_of_study, end_date")
+                        .single();
+                    if (eduError) {
+                        throw new Error(eduError.message || "Failed to update education.");
+                    }
+                    if (updatedEdu) {
+                        setEducation({
+                            education_id: updatedEdu.education_id ?? null,
+                            school: updatedEdu.school || "",
+                            degree: updatedEdu.degree || "",
+                            field_of_study: updatedEdu.field_of_study || "",
+                            end_date: updatedEdu.end_date || null,
+                        });
+                        setEducationYear(updatedEdu.end_date ? String(updatedEdu.end_date).slice(0, 4) : "");
+                    }
+                } else {
+                    const { data: insertedEdu, error: eduError } = await supabase
+                        .from("freelancer_education")
+                        .insert({
+                            freelancer_id: profile.freelancer_id,
+                            ...educationPayload,
+                        })
+                        .select("education_id, school, degree, field_of_study, end_date")
+                        .single();
+                    if (eduError) {
+                        throw new Error(eduError.message || "Failed to save education.");
+                    }
+                    if (insertedEdu) {
+                        setEducation({
+                            education_id: insertedEdu.education_id ?? null,
+                            school: insertedEdu.school || "",
+                            degree: insertedEdu.degree || "",
+                            field_of_study: insertedEdu.field_of_study || "",
+                            end_date: insertedEdu.end_date || null,
+                        });
+                        setEducationYear(insertedEdu.end_date ? String(insertedEdu.end_date).slice(0, 4) : "");
+                    }
+                }
+            } else if (education.education_id) {
+                const { error: eduError } = await supabase
+                    .from("freelancer_education")
+                    .delete()
+                    .eq("education_id", education.education_id);
+                if (eduError) {
+                    throw new Error(eduError.message || "Failed to remove education.");
+                }
+                setEducation({
+                    education_id: null,
+                    school: "",
+                    degree: "",
+                    field_of_study: "",
+                    end_date: null,
+                });
+                setEducationYear("");
             }
 
             setSuccessMsg("Profile updated successfully.");
@@ -641,8 +779,15 @@ export default function FreelancerProfilePage() {
         );
     };
 
-    const renderProfileGrid = (isEditing: boolean) => (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    const renderProfileGrid = (isEditing: boolean) => {
+        const educationYearLabel = educationYear;
+        const educationDetail = [education.degree, education.field_of_study].filter(Boolean).join(" | ");
+        const hasEducation = Boolean(
+            education.school || education.degree || education.field_of_study || educationYearLabel
+        );
+
+        return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column - Profile Details */}
             <div className="lg:col-span-2 space-y-8">
                 {/* About / Bio */}
@@ -700,6 +845,83 @@ export default function FreelancerProfilePage() {
                                 </span>
                             )) : (
                                 <span className="text-[#86868b] italic">No skills added yet.</span>
+                            )}
+                        </div>
+                    )}
+                </section>
+
+                {/* Education */}
+                <section className="bg-white rounded-[32px] p-8 border border-[#f5f5f7] shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 bg-[#f5f5f7] rounded-xl flex items-center justify-center">
+                            <GraduationCap size={20} className="text-black" />
+                        </div>
+                        <h2 className="text-[21px] font-semibold text-black tracking-tight">Education</h2>
+                    </div>
+
+                    {isEditing ? (
+                        <div className="space-y-4">
+                            <input
+                                type="text"
+                                className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-3 text-[16px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                value={education.school}
+                                onChange={(e) => setEducation(prev => ({ ...prev, school: e.target.value }))}
+                                placeholder="School or university"
+                            />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input
+                                    type="text"
+                                    className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-3 text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                    value={education.degree}
+                                    onChange={(e) => setEducation(prev => ({ ...prev, degree: e.target.value }))}
+                                    placeholder="Degree"
+                                />
+                                <input
+                                    type="text"
+                                    className="w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-3 text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                    value={education.field_of_study}
+                                    onChange={(e) => setEducation(prev => ({ ...prev, field_of_study: e.target.value }))}
+                                    placeholder="Field of study"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wider ml-1">
+                                    Graduation year
+                                </label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={educationYear}
+                                    onChange={(e) => {
+                                        const year = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                        setEducationYear(year);
+                                        setEducation((prev) => ({
+                                            ...prev,
+                                            end_date: year.length === 4 ? `${year}-01-01` : null,
+                                        }));
+                                    }}
+                                    placeholder="2024"
+                                    className="mt-2 w-full bg-[#f9f9fb] rounded-xl border border-[#ebebeb] px-4 py-3 text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                />
+                                <p className="text-[11px] text-[#86868b] mt-2">Use YYYY (e.g. 2024).</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {hasEducation ? (
+                                <>
+                                    <p className="text-[17px] text-[#1d1d1f] font-semibold">
+                                        {education.school || "Education"}
+                                    </p>
+                                    {educationDetail && (
+                                        <p className="text-[14px] text-[#86868b]">{educationDetail}</p>
+                                    )}
+                                    {educationYearLabel && (
+                                        <p className="text-[13px] text-[#86868b]">{educationYearLabel}</p>
+                                    )}
+                                </>
+                            ) : (
+                                <span className="text-[#86868b] italic">No education added yet.</span>
                             )}
                         </div>
                     )}
@@ -865,8 +1087,9 @@ export default function FreelancerProfilePage() {
             <div className="space-y-8">
                 {renderSecuritySection()}
             </div>
-        </div>
-    );
+            </div>
+        );
+    };
 
     if (loading) {
         return (

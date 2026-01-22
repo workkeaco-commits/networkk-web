@@ -126,8 +126,9 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
 
     const education = {
       status: eduStatus,
-      university: (fd.get("university") || "").toString().trim(),
+      school: (fd.get("university") || "").toString().trim(),
       degree: (fd.get("degree") || "").toString().trim(),
+      major: (fd.get("major") || "").toString().trim(),
       graduationYear: (fd.get("graduationYear") || "").toString().trim(),
     };
 
@@ -204,19 +205,26 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                     <div className="space-y-2">
                       <label htmlFor="degree" className="text-[13px] font-medium text-gray-500 ml-1">Degree</label>
                       <input
-                        id="degree" name="degree" type="text" placeholder="e.g. Computer Science"
+                        id="degree" name="degree" type="text" placeholder="e.g. Bachelor's"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="graduationYear" className="text-[13px] font-medium text-gray-500 ml-1">
-                        {eduStatus === "graduated" ? "Graduation Year" : "Expected Grad Year"}
-                      </label>
+                      <label htmlFor="major" className="text-[13px] font-medium text-gray-500 ml-1">Major</label>
                       <input
-                        id="graduationYear" name="graduationYear" type="text" placeholder="2024"
+                        id="major" name="major" type="text" placeholder="e.g. Computer Science"
                         className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="graduationYear" className="text-[13px] font-medium text-gray-500 ml-1">
+                      {eduStatus === "graduated" ? "Graduation Year" : "Expected Grad Year"}
+                    </label>
+                    <input
+                      id="graduationYear" name="graduationYear" type="text" placeholder="2024"
+                      className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm"
+                    />
                   </div>
                 </div>
               )}
