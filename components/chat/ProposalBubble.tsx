@@ -100,12 +100,7 @@ export default function ProposalBubble({
     );
   }
 
-  const statusColor =
-    data.status === "accepted"
-      ? "bg-green-500"
-      : data.status === "rejected"
-      ? "bg-red-500"
-      : "bg-blue-500";
+  const isAccepted = data.status === "accepted";
 
   return (
     <motion.div
@@ -120,12 +115,16 @@ export default function ProposalBubble({
       >
         <div className="px-4 py-3">
           <div className="flex items-start justify-between mb-2 gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-1.5 h-1.5 rounded-full ${statusColor}`} />
-              <span className="text-[11px] font-medium text-gray-500 capitalize">
-                {data.status}
-              </span>
-            </div>
+            {isAccepted ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                <span className="text-[11px] font-medium text-gray-500 capitalize">
+                  {data.status}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[11px] font-medium text-gray-400">Proposal</span>
+            )}
 
             {/* REPLACED: proposal id -> job title */}
             <span className="text-[10px] font-medium text-gray-400 max-w-[140px] truncate text-right">

@@ -34,6 +34,7 @@ export async function GET(
     let q = supabaseAdmin
       .from("freelancers")
       .select("*")
+      .eq("approval_status", "approved")
       .order("created_at", { ascending: false })
       .limit(100);
 

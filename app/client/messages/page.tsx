@@ -32,6 +32,12 @@ function parseProposalId(body: string): number | null {
   return Number.isFinite(id) ? id : null;
 }
 
+function formatPreview(body?: string | null) {
+  if (!body) return "";
+  if (body.match(/\[\[proposal\]\]\s*:\s*\d+/i)) return "Proposal";
+  return body;
+}
+
 const EPOCH_ISO = "1970-01-01T00:00:00Z";
 
 /* ---------------- Types ---------------- */
@@ -171,16 +177,6 @@ function OfferInlineModal({
       if (!res.ok) {
         setServerError(json?.error || "Failed to send offer");
         return;
-      }
-
-      if (conversationId && currentUserId) {
-        await supabase.from("messages").insert({
-          conversation_id: conversationId,
-          sender_auth_id: currentUserId,
-          sender_role: "client",
-          body: `[[proposal]]:${json.proposal_id}`,
-        });
-        await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
       }
 
       onClose();
@@ -465,6 +461,7 @@ function ClientOfferViewerModal({
   const toInt = (s: string) => Number(s.replace(/[^\d]/g, "")) || 0;
   const currency = proposal?.currency || "EGP";
   const total = (proposal?.proposal_milestones || []).reduce((a, m) => a + (Number(m.amount_gross ?? 0) || 0), 0);
+  const isAccepted = proposal?.status === "accepted";
 
   const actorAccepted = !!proposal?.accepted_by_client;
   const otherAccepted = !!proposal?.accepted_by_freelancer;
@@ -572,7 +569,9 @@ function ClientOfferViewerModal({
             <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Proposal</h3>
-                <p className="text-xs text-gray-500 mt-0.5">#{proposal?.proposal_id}</p>
+                {isAccepted && (
+                  <p className="text-xs text-gray-500 mt-0.5">#{proposal?.proposal_id}</p>
+                )}
               </div>
               <button
                 type="button"
@@ -591,20 +590,18 @@ function ClientOfferViewerModal({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        proposal.status === "accepted" ? "bg-green-500" : proposal.status === "rejected" ? "bg-red-500" : "bg-blue-500"
-                      }`}
-                    />
-                    <span className="text-sm font-medium text-gray-700 capitalize">{proposal.status}</span>
-                    {locked && (
-                      <>
-                        <span className="text-gray-300">•</span>
-                        <span className="text-xs text-orange-600 font-medium">Contract Active</span>
-                      </>
-                    )}
-                  </div>
+                  {isAccepted && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="text-sm font-medium text-gray-700 capitalize">{proposal.status}</span>
+                      {locked && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <span className="text-xs text-orange-600 font-medium">Contract Active</span>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   <div className="bg-gray-50 rounded-2xl p-5">
                     <p className="text-xs text-gray-500 mb-1">Total Amount</p>
@@ -689,7 +686,7 @@ function ClientOfferViewerModal({
                 {canAccept && (
                   <button
                     onClick={acceptOffer}
-                    className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all"
+                    className="w-full py-3 rounded-xl bg-[#10b8a6] text-white text-sm font-semibold hover:bg-[#0e9f8e] active:scale-[0.98] transition-all"
                   >
                     Accept Proposal
                   </button>
@@ -1034,7 +1031,9 @@ function ClientMessagesContent() {
                 fallback: initials(displayFreelancerName(c.freelancer)),
               })}
               getName={(c: Conversation) => displayFreelancerName(c.freelancer)}
-              getPreview={(c: Conversation) => c.last_message_body || c.job_posts?.title || "Project Inquiry"}
+              getPreview={(c: Conversation) =>
+                formatPreview(c.last_message_body) || c.job_posts?.title || "Project Inquiry"
+              }
               getTime={(c: Conversation) =>
                 c.last_message_at
                   ? new Date(c.last_message_at as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
@@ -1067,7 +1066,7 @@ function ClientMessagesContent() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setOfferModalOpen(true)}
-                  className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition-all shadow-md active:scale-95"
+                  className="flex items-center gap-2 bg-[#10b8a6] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#0e9f8e] transition-all shadow-md active:scale-95"
                 >
                   <FileText size={14} />
                   <span>Create Offer</span>

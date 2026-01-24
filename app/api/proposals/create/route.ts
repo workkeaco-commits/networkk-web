@@ -21,6 +21,7 @@ type CreateBody = {
   client_id?: number;
   freelancer_id?: number;
   conversation_id?: string | null;
+  actor_auth_id?: string | null;
 
   origin?: string; // "chat" etc
   offered_by?: "client" | "freelancer";
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
     const job_post_id = Number(body.job_post_id);
     const client_id = Number(body.client_id);
     const freelancer_id = Number(body.freelancer_id);
-    const conversation_id = (body.conversation_id ?? null) as string | null;
+    let conversation_id = (body.conversation_id ?? null) as string | null;
+    const origin = body.origin || "chat";
 
     const offered_by = (body.offered_by || "").toLowerCase() as "client" | "freelancer";
     if (!["client", "freelancer"].includes(offered_by)) {
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest) {
         client_id,
         freelancer_id,
         conversation_id,
-        origin: body.origin || "chat",
+        origin,
         offered_by,
         currency,
         platform_fee_percent,
@@ -139,16 +141,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Milestones insert failed: ${milErr.message}` }, { status: 400 });
     }
 
+    if (!conversation_id) {
+      const { data: existingConv } = await supabaseAdmin
+        .from("conversations")
+        .select("id")
+        .eq("job_post_id", job_post_id)
+        .eq("client_id", client_id)
+        .eq("freelancer_id", freelancer_id)
+        .maybeSingle();
+
+      if (existingConv?.id) {
+        conversation_id = existingConv.id as string;
+      } else {
+        const { data: newConv, error: convErr } = await supabaseAdmin
+          .from("conversations")
+          .insert({
+            job_post_id,
+            client_id,
+            freelancer_id,
+            last_message_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
+        if (!convErr && newConv?.id) {
+          conversation_id = newConv.id as string;
+        }
+      }
+
+      if (conversation_id) {
+        await supabaseAdmin
+          .from("proposals")
+          .update({ conversation_id })
+          .eq("proposal_id", inserted.proposal_id);
+      }
+    }
+
     const [jobRes, clientRes, freelancerRes] = await Promise.all([
       supabaseAdmin.from("job_posts").select("title").eq("job_post_id", job_post_id).maybeSingle(),
       supabaseAdmin
         .from("clients")
-        .select("first_name, last_name, company_name, email")
+        .select("first_name, last_name, company_name, email, auth_user_id")
         .eq("client_id", client_id)
         .maybeSingle(),
       supabaseAdmin
         .from("freelancers")
-        .select("first_name, last_name, email")
+        .select("first_name, last_name, email, auth_user_id")
         .eq("freelancer_id", freelancer_id)
         .maybeSingle(),
     ]);
@@ -219,7 +256,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, proposal_id: inserted.proposal_id });
+    if (conversation_id) {
+      const { data: existingMsg } = await supabaseAdmin
+        .from("messages")
+        .select("id")
+        .eq("conversation_id", conversation_id)
+        .eq("body", `[[proposal]]:${inserted.proposal_id}`)
+        .maybeSingle();
+
+      if (!existingMsg) {
+        const sender_auth_id =
+          offered_by === "client" ? clientRow?.auth_user_id : freelancerRow?.auth_user_id;
+        if (sender_auth_id) {
+          await supabaseAdmin.from("messages").insert({
+            conversation_id,
+            sender_auth_id,
+            sender_role: offered_by,
+            body: `[[proposal]]:${inserted.proposal_id}`,
+          });
+        } else {
+          console.error("[proposals/create] missing sender auth_user_id for proposal message");
+        }
+      }
+
+      await supabaseAdmin
+        .from("conversations")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", conversation_id);
+    }
+
+    return NextResponse.json({ ok: true, proposal_id: inserted.proposal_id, conversation_id });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }

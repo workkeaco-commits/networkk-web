@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   X,
   Calendar,
-  DollarSign,
   MessageCircle,
   User,
   ExternalLink,
@@ -36,9 +35,12 @@ type Applicant = {
   freelancer: {
     first_name: string | null;
     last_name: string | null;
-    freelancer_id?: number | null;
+    freelancer_id: number;
     job_title: string | null;
     personal_img_url: string | null;
+    bio?: string | null;
+    skills?: string | null;
+    created_at?: string | null;
   };
 };
 
@@ -78,6 +80,34 @@ type ProposalMilestone = {
   duration_days: number | null;
 };
 
+type FreelancerProject = {
+  project_id: number;
+  project_name: string | null;
+  project_description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  project_url: string | null;
+};
+
+type FreelancerCertificate = {
+  certificate_id: number;
+  name: string | null;
+  issuer: string | null;
+  issue_date: string | null;
+  expiry_date: string | null;
+  credential_id: string | null;
+  credential_url: string | null;
+};
+
+type FreelancerEducation = {
+  education_id: number;
+  school: string | null;
+  degree: string | null;
+  field_of_study: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+
 function timeAgo(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -94,16 +124,43 @@ function timeAgo(iso?: string | null) {
   return `${days}d ago`;
 }
 
+function initials(name?: string | null) {
+  if (!name) return "F";
+  const parts = name.split(" ").filter(Boolean);
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "F";
+}
+
+function formatProjectMonth(value?: string | null) {
+  if (!value) return "";
+  const [year, month] = String(value).slice(0, 7).split("-");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const label = months[Number(month) - 1] || value;
+  return `${label} ${year}`;
+}
+
+function formatProjectRange(start?: string | null, end?: string | null) {
+  if (!start && !end) return "";
+  const startLabel = start ? formatProjectMonth(start) : "—";
+  const endLabel = end ? formatProjectMonth(end) : "Present";
+  return `${startLabel} - ${endLabel}`;
+}
+
+function formatCertificateDates(issue?: string | null, expiry?: string | null) {
+  const parts = [];
+  if (issue) parts.push(`Issued ${formatProjectMonth(issue)}`);
+  if (expiry) parts.push(`Expires ${formatProjectMonth(expiry)}`);
+  return parts.join(" | ");
+}
+
+function formatEducationEndYear(end?: string | null) {
+  if (!end) return "Present";
+  return String(end).slice(0, 4);
+}
+
 function money(n: number, currency?: string | null) {
   const cur = currency || "EGP";
   const val = Number(n || 0);
   return `${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${cur}`;
-}
-
-function computeNet(totalGross: number, feePct: number) {
-  const tg = Number(totalGross || 0);
-  const fp = Number(feePct || 0);
-  return Math.max(0, tg - (tg * fp) / 100);
 }
 
 function displayFreelancerName(f?: { first_name?: string | null; last_name?: string | null; freelancer_id?: number | null } | null) {
@@ -126,9 +183,18 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
   const [proposalError, setProposalError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<ProposalDetails | null>(null);
   const [milestones, setMilestones] = useState<ProposalMilestone[]>([]);
+  const [proposalActionLoading, setProposalActionLoading] = useState(false);
+  const [proposalActionError, setProposalActionError] = useState<string | null>(null);
+  const [replyLoading, setReplyLoading] = useState(false);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [chatLoadingId, setChatLoadingId] = useState<number | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileFreelancer, setProfileFreelancer] = useState<Applicant["freelancer"] | null>(null);
+  const [profileProjects, setProfileProjects] = useState<FreelancerProject[]>([]);
+  const [profileCertificates, setProfileCertificates] = useState<FreelancerCertificate[]>([]);
+  const [profileEducation, setProfileEducation] = useState<FreelancerEducation[]>([]);
+  const [profileDetailsLoading, setProfileDetailsLoading] = useState(false);
 
   const router = useRouter();
 
@@ -166,7 +232,10 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                 first_name,
                 last_name,
                 job_title,
-                personal_img_url
+                personal_img_url,
+                bio,
+                skills,
+                created_at
               )
             `
           )
@@ -187,9 +256,12 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
             freelancer: {
               first_name: r.freelancers?.first_name ?? null,
               last_name: r.freelancers?.last_name ?? null,
-              freelancer_id: r.freelancer_id,
+              freelancer_id: Number(r.freelancer_id),
               job_title: r.freelancers?.job_title ?? null,
               personal_img_url: r.freelancers?.personal_img_url ?? null,
+              bio: r.freelancers?.bio ?? null,
+              skills: r.freelancers?.skills ?? null,
+              created_at: r.freelancers?.created_at ?? null,
             },
           }))
           .filter((x) => Number.isFinite(x.initialProposalId) && Number.isFinite(x.freelancer_id));
@@ -221,11 +293,17 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
   }, [isOpen, jobPostId]);
 
   useEffect(() => {
-    if (!isOpen) setIsInviteOpen(false);
+    if (!isOpen) {
+      setIsInviteOpen(false);
+      setProfileModalOpen(false);
+      setProfileFreelancer(null);
+    }
   }, [isOpen]);
 
   useEffect(() => {
     setIsInviteOpen(false);
+    setProfileModalOpen(false);
+    setProfileFreelancer(null);
   }, [jobPostId]);
 
   // Open proposal details popup and load latest proposal in the chain
@@ -235,6 +313,7 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
 
     setProposalLoading(true);
     setProposalError(null);
+    setProposalActionError(null);
     setProposal(null);
     setMilestones([]);
 
@@ -369,7 +448,116 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
     setProposal(null);
     setMilestones([]);
     setProposalError(null);
+    setProposalActionError(null);
     setProposalLoading(false);
+  }
+
+  async function ensureChatForProposal(proposalId: number) {
+    const res = await fetch(`/api/proposals/${proposalId}/ensure-chat`, { method: "POST" });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error || "Failed to open chat");
+    }
+    return json?.conversation_id as string | null;
+  }
+
+  async function handleAcceptProposal() {
+    if (!proposal) return;
+    setProposalActionLoading(true);
+    setProposalActionError(null);
+    try {
+      const res = await fetch(`/api/proposals/${proposal.proposal_id}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept", actor: "client" }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Failed to accept offer");
+      }
+
+      setProposal((prev) =>
+        prev ? { ...prev, status: "pending", accepted_by_client: true } : prev
+      );
+
+      const conversationId = await ensureChatForProposal(proposal.proposal_id);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && conversationId) {
+        await supabase.from("messages").insert({
+          conversation_id: conversationId,
+          sender_auth_id: user.id,
+          sender_role: "client",
+          body: `Client accepted the offer (Proposal #${proposal.proposal_id}). Waiting for freelancer to confirm.`,
+        });
+        await supabase
+          .from("conversations")
+          .update({ last_message_at: new Date().toISOString() })
+          .eq("id", conversationId);
+      }
+    } catch (err: any) {
+      setProposalActionError(err?.message || "Failed to accept offer.");
+    } finally {
+      setProposalActionLoading(false);
+    }
+  }
+
+  async function handleReplyInChat() {
+    if (!proposal) return;
+    setReplyLoading(true);
+    setProposalActionError(null);
+    try {
+      const conversationId = await ensureChatForProposal(proposal.proposal_id);
+      if (conversationId) {
+        router.push(`/client/messages?conversation_id=${conversationId}`);
+      }
+    } catch (err: any) {
+      setProposalActionError(err?.message || "Failed to open chat.");
+    } finally {
+      setReplyLoading(false);
+    }
+  }
+
+  function openProfileModal(f: Applicant["freelancer"]) {
+    if (!f?.freelancer_id) return;
+    setProfileFreelancer(f);
+    setProfileModalOpen(true);
+    void loadProfileDetails(f.freelancer_id);
+  }
+
+  function closeProfileModal() {
+    setProfileModalOpen(false);
+    setProfileFreelancer(null);
+    setProfileProjects([]);
+    setProfileCertificates([]);
+    setProfileEducation([]);
+  }
+
+  async function loadProfileDetails(freelancerId: number) {
+    setProfileDetailsLoading(true);
+    setProfileProjects([]);
+    setProfileCertificates([]);
+    setProfileEducation([]);
+    try {
+      const res = await fetch(`/api/freelancers/${freelancerId}/profile`, {
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Failed to load freelancer profile details");
+      }
+      setProfileProjects(json.projects || []);
+      setProfileCertificates(json.certificates || []);
+      setProfileEducation(json.education || []);
+    } catch (err) {
+      console.error("Failed to load freelancer profile details", err);
+      setProfileProjects([]);
+      setProfileCertificates([]);
+      setProfileEducation([]);
+    } finally {
+      setProfileDetailsLoading(false);
+    }
   }
 
   async function openConversationForApplicant(a: Applicant) {
@@ -482,28 +670,16 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 200, mass: 0.8 }}
-              className="bg-white border border-white/50 rounded-[48px] shadow-2xl p-10 flex flex-col md:flex-row gap-10 items-start overflow-hidden"
+              className="relative bg-white border border-white/50 rounded-[48px] shadow-2xl p-10 flex flex-col md:flex-row gap-10 items-start overflow-hidden"
             >
+              <button
+                onClick={onClose}
+                className="absolute right-6 top-6 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-black transition-all"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
               <div className="flex-1 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        job.engagement_type === "long_term" ? "bg-indigo-600" : "bg-green-600"
-                      }`}
-                    />
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
-                      {job.engagement_type === "long_term" ? "Retainer" : "Milestone"}
-                    </span>
-                  </div>
-                  <button
-                    onClick={onClose}
-                    className="md:hidden w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-black transition-all"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
                 <h2 className="text-4xl font-bold tracking-tight text-gray-900 leading-tight pr-10">
                   {job.title}
                 </h2>
@@ -516,7 +692,6 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
               <div className="w-full md:w-72 space-y-4">
                 <div className="bg-[#fbfbfd] p-6 rounded-[32px] border border-gray-50 flex flex-col justify-between h-32">
                   <div className="flex items-center gap-2">
-                    <DollarSign size={16} className="text-gray-300" />
                     <span className="text-[11px] uppercase tracking-widest font-bold text-gray-400">
                       Total Budget
                     </span>
@@ -547,12 +722,6 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                   </div>
                 </div>
 
-                <button
-                  onClick={onClose}
-                  className="hidden md:flex w-full bg-black text-white py-5 rounded-[28px] font-bold text-[15px] tracking-tight hover:opacity-90 active:scale-[0.98] transition-all items-center justify-center gap-2 shadow-xl shadow-black/10"
-                >
-                  Close Case
-                </button>
               </div>
             </motion.div>
 
@@ -568,7 +737,7 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                 <div className="flex items-center gap-3">
                   <h3 className="text-2xl font-bold text-gray-900 tracking-tight">Top Applicants</h3>
                   <div className="h-6 w-[1px] bg-gray-200" />
-                  <span className="text-blue-600 text-xs font-bold uppercase tracking-widest">
+                  <span className="text-[#10b8a6] text-xs font-bold uppercase tracking-widest">
                     {loadingApplicants ? "Loading…" : `${applicants.length} Matches`}
                   </span>
                 </div>
@@ -615,11 +784,20 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.15 + idx * 0.05 }}
-                      className="snap-start min-w-[280px] group bg-white border border-gray-100 p-6 rounded-[36px] hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5 transition-all flex flex-col justify-between h-[260px]"
+                      className="snap-start min-w-[280px] group bg-white border border-gray-100 p-6 rounded-[36px] hover:border-[#10b8a6]/30 hover:shadow-xl hover:shadow-[#10b8a6]/10 transition-all flex flex-col justify-between h-[260px] cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openProfileModal(a.freelancer)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openProfileModal(a.freelancer);
+                        }
+                      }}
                     >
                       <div>
                         <div className="flex items-center gap-4 mb-6">
-                          <div className="w-14 h-14 rounded-3xl bg-[#fbfbfd] flex items-center justify-center text-gray-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all duration-500 overflow-hidden">
+                          <div className="w-14 h-14 rounded-3xl bg-[#fbfbfd] flex items-center justify-center text-gray-300 group-hover:bg-[#e6f8f5] group-hover:text-[#10b8a6] transition-all duration-500 overflow-hidden">
                             {a.freelancer.personal_img_url ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -631,12 +809,12 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                               <User size={28} />
                             )}
                           </div>
-                          <div className="text-gray-300 group-hover:text-blue-500 transition-colors">
+                          <div className="text-[#10b8a6] group-hover:text-[#0e9f8e] transition-colors">
                             <ExternalLink size={16} />
                           </div>
                         </div>
 
-                        <h4 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                        <h4 className="font-bold text-xl text-[#10b8a6] mb-1 group-hover:text-[#0e9f8e] transition-colors">
                           {displayFreelancerName(a.freelancer)}
                         </h4>
                         <p className="text-sm font-medium text-gray-400">
@@ -651,17 +829,23 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                       <div className="flex items-center gap-3 mt-4">
                         <button
                           className="flex-1 bg-[#f4f4f5] text-gray-900 py-3 rounded-2xl text-[13px] font-bold hover:bg-black hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2"
-                          onClick={() => openProposalForApplicant(a)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openProposalForApplicant(a);
+                          }}
                         >
                           <FileText size={16} />
                           View proposal
                         </button>
 
                         <button
-                          className={`w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-600/20 ${
+                          className={`w-12 h-12 rounded-2xl bg-[#10b8a6] flex items-center justify-center text-white hover:bg-[#0e9f8e] transition-all active:scale-95 shadow-lg shadow-[#10b8a6]/25 ${
                             chatLoadingId === a.freelancer_id ? "opacity-70 cursor-not-allowed" : ""
                           }`}
-                          onClick={() => openConversationForApplicant(a)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openConversationForApplicant(a);
+                          }}
                           disabled={chatLoadingId === a.freelancer_id}
                           title="Chat"
                         >
@@ -703,6 +887,236 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
               )}
             </motion.div>
           </div>
+
+          {/* ===== NESTED POPUP: Freelancer Profile ===== */}
+          <AnimatePresence>
+            {profileModalOpen && profileFreelancer && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[120] flex items-start justify-center bg-black/35 backdrop-blur-xl p-6 overflow-y-auto"
+                onClick={closeProfileModal}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Freelancer profile"
+                  className="w-full max-w-lg rounded-[32px] border border-white/40 bg-white/70 shadow-[0_30px_80px_rgba(15,15,15,0.25)] backdrop-blur-2xl p-6 max-h-[85vh] overflow-y-auto"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white/70 flex-shrink-0 overflow-hidden flex items-center justify-center text-gray-600 font-bold border border-white/60">
+                        {profileFreelancer.personal_img_url ? (
+                          <img
+                            src={profileFreelancer.personal_img_url}
+                            alt={displayFreelancerName(profileFreelancer)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          initials(displayFreelancerName(profileFreelancer))
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {displayFreelancerName(profileFreelancer)}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {profileFreelancer.job_title || "Freelancer"}
+                        </p>
+                        {profileFreelancer.created_at && (
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            Member since{" "}
+                            {new Date(profileFreelancer.created_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeProfileModal}
+                      className="w-8 h-8 rounded-full bg-white/70 border border-white/60 flex items-center justify-center text-gray-400 hover:text-black hover:bg-white transition-all"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className="mt-6 space-y-5">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                        About
+                      </p>
+                      <p className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                        {profileFreelancer.bio?.trim() || "No bio provided yet."}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                        Skills
+                      </p>
+                      {profileFreelancer.skills ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {profileFreelancer.skills
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .map((s, i) => (
+                              <span
+                                key={`${s}-${i}`}
+                                className="rounded-full bg-white/80 border border-white/70 px-3 py-1 text-[11px] font-semibold text-gray-600"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">No skills listed.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                        Projects
+                      </p>
+                      {profileDetailsLoading ? (
+                        <p className="mt-2 text-sm text-gray-500">Loading projects...</p>
+                      ) : profileProjects.length ? (
+                        <div className="mt-3 space-y-3">
+                          {profileProjects.map((project, index) => {
+                            const range = formatProjectRange(project.start_date, project.end_date);
+                            return (
+                              <div
+                                key={`${project.project_name || "project"}-${index}`}
+                                className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3"
+                              >
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {project.project_name || "Untitled project"}
+                                </p>
+                                {range && (
+                                  <p className="text-[11px] text-gray-400 mt-1">
+                                    {range}
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-600 mt-2 whitespace-pre-wrap">
+                                  {project.project_description || "No description provided."}
+                                </p>
+                                {project.project_url && (
+                                  <a
+                                    href={project.project_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-2 inline-flex text-[11px] font-semibold text-[#10b8a6] hover:underline"
+                                  >
+                                    View project
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">No projects listed.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                        Certificates
+                      </p>
+                      {profileDetailsLoading ? (
+                        <p className="mt-2 text-sm text-gray-500">Loading certificates...</p>
+                      ) : profileCertificates.length ? (
+                        <div className="mt-3 space-y-3">
+                          {profileCertificates.map((cert) => {
+                            const meta = formatCertificateDates(cert.issue_date, cert.expiry_date);
+                            return (
+                              <div
+                                key={cert.certificate_id}
+                                className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3"
+                              >
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {cert.name || "Certificate"}
+                                </p>
+                                {(cert.issuer || meta) && (
+                                  <p className="text-[11px] text-gray-400 mt-1">
+                                    {[cert.issuer, meta].filter(Boolean).join(" | ")}
+                                  </p>
+                                )}
+                                {(cert.credential_id || cert.credential_url) && (
+                                  <div className="mt-2 text-[11px] text-gray-500 space-y-1">
+                                    {cert.credential_id && (
+                                      <p>Credential ID: {cert.credential_id}</p>
+                                    )}
+                                    {cert.credential_url && (
+                                      <a
+                                        href={cert.credential_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex text-[#10b8a6] hover:underline"
+                                      >
+                                        View credential
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">No certificates listed.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                        Education
+                      </p>
+                      {profileDetailsLoading ? (
+                        <p className="mt-2 text-sm text-gray-500">Loading education...</p>
+                      ) : profileEducation.length ? (
+                        <div className="mt-3 space-y-3">
+                          {profileEducation.map((edu) => {
+                            const endYear = formatEducationEndYear(edu.end_date);
+                            const detail = [edu.degree, edu.field_of_study]
+                              .filter(Boolean)
+                              .join(" | ");
+                            return (
+                              <div
+                                key={edu.education_id}
+                                className="rounded-2xl border border-white/70 bg-white/70 px-4 py-3"
+                              >
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {edu.school || "Education"}
+                                </p>
+                                {detail && (
+                                  <p className="text-[11px] text-gray-400 mt-1">
+                                    {detail}
+                                  </p>
+                                )}
+                                {endYear && (
+                                  <p className="text-[11px] text-gray-400 mt-1">
+                                    {endYear}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-gray-500">No education listed.</p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* ===== NESTED POPUP: Proposal Details ===== */}
           <AnimatePresence>
@@ -773,35 +1187,25 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                   ) : proposal ? (
                     <>
                       {/* meta */}
-                      <div className="mt-6 grid gap-4 md:grid-cols-3">
-                        <div className="rounded-3xl bg-[#fbfbfd] border border-gray-50 p-5">
-                          <div className="text-[11px] uppercase tracking-widest font-bold text-gray-400">
-                            Status
+                      <div className="mt-6 grid gap-4 md:grid-cols-2">
+                        {proposal.status === "accepted" && (
+                          <div className="rounded-3xl bg-[#fbfbfd] border border-gray-50 p-5">
+                            <div className="text-[11px] uppercase tracking-widest font-bold text-gray-400">
+                              Status
+                            </div>
+                            <div className="mt-1 text-lg font-bold text-gray-900">{proposal.status}</div>
+                            <div className="mt-1 text-xs font-bold text-gray-300 uppercase tracking-widest">
+                              {timeAgo(proposal.created_at)}
+                            </div>
                           </div>
-                          <div className="mt-1 text-lg font-bold text-gray-900">{proposal.status}</div>
-                          <div className="mt-1 text-xs font-bold text-gray-300 uppercase tracking-widest">
-                            {timeAgo(proposal.created_at)}
-                          </div>
-                        </div>
+                        )}
 
                         <div className="rounded-3xl bg-[#fbfbfd] border border-gray-50 p-5">
                           <div className="text-[11px] uppercase tracking-widest font-bold text-gray-400">
-                            Total (gross)
+                            Budget
                           </div>
                           <div className="mt-1 text-lg font-bold text-gray-900">
                             {money(proposal.total_gross, proposal.currency)}
-                          </div>
-                          <div className="mt-1 text-xs text-gray-400 font-medium">
-                            Fee: {proposal.platform_fee_percent}%
-                          </div>
-                        </div>
-
-                        <div className="rounded-3xl bg-[#fbfbfd] border border-gray-50 p-5">
-                          <div className="text-[11px] uppercase tracking-widest font-bold text-gray-400">
-                            Total (net)
-                          </div>
-                          <div className="mt-1 text-lg font-bold text-gray-900">
-                            {money(computeNet(proposal.total_gross, proposal.platform_fee_percent), proposal.currency)}
                           </div>
                           <div className="mt-1 text-xs text-gray-400 font-medium">
                             Offered by: {proposal.offered_by}
@@ -855,6 +1259,39 @@ export default function JobPostModal({ job, isOpen, onClose }: JobPostModalProps
                           </div>
                         )}
                       </div>
+
+                      {(proposalActionError || proposal) && (
+                        <div className="mt-6 space-y-3">
+                          {proposalActionError && (
+                            <div className="rounded-3xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-700">
+                              {proposalActionError}
+                            </div>
+                          )}
+
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            {proposal.offered_by === "freelancer" &&
+                              ["sent", "countered", "pending"].includes(proposal.status) &&
+                              !proposal.accepted_by_client && (
+                                <button
+                                  type="button"
+                                  onClick={handleAcceptProposal}
+                                  disabled={proposalActionLoading}
+                                  className="flex-1 rounded-2xl bg-black text-white py-3 text-[13px] font-semibold hover:bg-[#1d1d1f] transition-all disabled:opacity-50"
+                                >
+                                  {proposalActionLoading ? "Accepting..." : "Accept Offer"}
+                                </button>
+                              )}
+                            <button
+                              type="button"
+                              onClick={handleReplyInChat}
+                              disabled={replyLoading}
+                              className="flex-1 rounded-2xl border border-[#d2d2d7] bg-white text-black py-3 text-[13px] font-semibold hover:bg-[#fafafa] transition-all disabled:opacity-50"
+                            >
+                              {replyLoading ? "Opening chat..." : "Reply in chat"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-8 text-center text-gray-500">
