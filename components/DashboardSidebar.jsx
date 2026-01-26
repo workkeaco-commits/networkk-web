@@ -15,9 +15,11 @@ import {
     FileText
 } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
+import { supabase } from "@/lib/supabase/browser";
 
 export default function DashboardSidebar({ onSignOut }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const pathname = usePathname();
 
     const menuItems = [
@@ -27,6 +29,36 @@ export default function DashboardSidebar({ onSignOut }) {
         { name: "Contracts", icon: FileText, href: "/client/contracts" },
         { name: "Financials", icon: Wallet, href: "/client/financials" },
     ];
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchUnread = async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) {
+                if (!cancelled) setUnreadCount(0);
+                return;
+            }
+
+            const { data, error } = await supabase.rpc("count_unread_for_client");
+            if (cancelled) return;
+            if (error) {
+                console.error("unread count error", error);
+                return;
+            }
+            setUnreadCount(typeof data === "number" ? data : 0);
+        };
+
+        fetchUnread();
+        const id = setInterval(fetchUnread, 15000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(id);
+        };
+    }, []);
 
     return (
         <aside
@@ -67,7 +99,7 @@ export default function DashboardSidebar({ onSignOut }) {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group ${isActive
+                            className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group ${isActive
                                 ? "bg-teal-50 text-[#10b8a6]"
                                 : "text-gray-500 hover:bg-gray-50 hover:text-black"
                                 }`}
@@ -80,6 +112,13 @@ export default function DashboardSidebar({ onSignOut }) {
                             {!isCollapsed && (
                                 <span className={`font-semibold text-[15px] ${isActive ? "text-[#10b8a6]" : ""}`}>
                                     {item.name}
+                                </span>
+                            )}
+                            {item.name === "Messages" && unreadCount > 0 && (
+                                <span
+                                    className={`inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white ${isCollapsed ? "absolute right-3 top-2" : "ml-auto"}`}
+                                >
+                                    {unreadCount > 99 ? "99+" : unreadCount}
                                 </span>
                             )}
                         </Link>

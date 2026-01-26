@@ -321,6 +321,24 @@ export async function POST(
         const freelancerRow = freelancerRes.data;
         const total = { amount: proposal.total_gross, currency: proposal.currency };
 
+        if (clientRow) {
+          const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
+            recipient_role: "client",
+            recipient_id: proposal.client_id,
+            type: "contract_confirmed",
+            title: "Contract confirmed",
+            body: `Your contract for "${jobTitle}" has been confirmed.`,
+            link: `/client/contracts/${contractId}`,
+            job_post_id: proposal.job_post_id,
+            proposal_id: proposal.proposal_id,
+            metadata: { contract_id: contractId, freelancer_id: proposal.freelancer_id },
+          });
+
+          if (notifyErr) {
+            console.error("[proposals/respond] contract confirmed notification failed:", notifyErr);
+          }
+        }
+
         if (clientRow?.email) {
           const emailPayload = buildContractConfirmedEmail({
             person: {

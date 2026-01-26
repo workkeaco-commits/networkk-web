@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,9 +14,11 @@ import {
     Wallet,
 } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
+import { supabase } from "@/lib/supabase/browser";
 
 export default function FreelancerSidebar({ onSignOut }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const pathname = usePathname();
 
     const menuItems = [
@@ -26,6 +28,36 @@ export default function FreelancerSidebar({ onSignOut }) {
         { name: "Wallet", icon: Wallet, href: "/freelancer/wallet" },
         { name: "Profile", icon: User, href: "/freelancer/profile" },
     ];
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchUnread = async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) {
+                if (!cancelled) setUnreadCount(0);
+                return;
+            }
+
+            const { data, error } = await supabase.rpc("count_unread_for_freelancer");
+            if (cancelled) return;
+            if (error) {
+                console.error("unread count error", error);
+                return;
+            }
+            setUnreadCount(typeof data === "number" ? data : 0);
+        };
+
+        fetchUnread();
+        const id = setInterval(fetchUnread, 15000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(id);
+        };
+    }, []);
 
     return (
         <aside
@@ -66,7 +98,7 @@ export default function FreelancerSidebar({ onSignOut }) {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group ${isActive
+                            className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 group ${isActive
                                 ? "bg-gray-900 text-white"
                                 : "text-gray-500 hover:bg-gray-50 hover:text-black"
                                 }`}
@@ -79,6 +111,13 @@ export default function FreelancerSidebar({ onSignOut }) {
                             {!isCollapsed && (
                                 <span className={`font-semibold text-[15px] ${isActive ? "text-white" : ""}`}>
                                     {item.name}
+                                </span>
+                            )}
+                            {item.name === "Messages" && unreadCount > 0 && (
+                                <span
+                                    className={`inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white ${isCollapsed ? "absolute right-3 top-2" : "ml-auto"}`}
+                                >
+                                    {unreadCount > 99 ? "99+" : unreadCount}
                                 </span>
                             )}
                         </Link>
