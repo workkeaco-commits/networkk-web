@@ -35,7 +35,7 @@ async function fetchInitialFreelancerProposalCounts(jobIds: number[]) {
 
   const { data, error } = await supabase
     .from("proposals")
-    .select("job_post_id")
+    .select("job_post_id, freelancer_id")
     .in("job_post_id", jobIds)
     .eq("offered_by", "freelancer")
     .is("supersedes_proposal_id", null);
@@ -45,11 +45,18 @@ async function fetchInitialFreelancerProposalCounts(jobIds: number[]) {
     return {};
   }
 
-  const counts: Record<number, number> = {};
+  const sets: Record<number, Set<number>> = {};
   for (const row of data || []) {
     const jid = (row as any).job_post_id as number | null;
-    if (jid == null) continue;
-    counts[jid] = (counts[jid] || 0) + 1;
+    const fid = (row as any).freelancer_id as number | null;
+    if (jid == null || fid == null) continue;
+    if (!sets[jid]) sets[jid] = new Set<number>();
+    sets[jid].add(fid);
+  }
+
+  const counts: Record<number, number> = {};
+  for (const [jobId, set] of Object.entries(sets)) {
+    counts[Number(jobId)] = set.size;
   }
   return counts;
 }
