@@ -45,6 +45,15 @@ function formatPreview(body?: string | null) {
   return body;
 }
 
+function formatDaysAsLabel(totalDays: number): string {
+  if (!Number.isFinite(totalDays) || totalDays <= 0) return "—";
+  if (totalDays % 7 === 0) {
+    const weeks = totalDays / 7;
+    return `${weeks} week${weeks !== 1 ? "s" : ""}`;
+  }
+  return `${totalDays} day${totalDays !== 1 ? "s" : ""}`;
+}
+
 const EPOCH_ISO = "1970-01-01T00:00:00Z";
 
 /* ---------------- Types ---------------- */
@@ -81,7 +90,12 @@ type MessageRow = {
 type ContractLite = { contract_id: number; status: string; proposal_id?: number | null };
 
 /* ---------------- Offer Modal (Create) ---------------- */
-type Milestone = { title: string; amount: string; days: string };
+type Milestone = {
+  title: string;
+  durationAmount: string;
+  durationUnit: "days" | "weeks" | "months";
+  priceAmount: string;
+};
 
 function OfferInlineModal({
   open,
@@ -105,16 +119,17 @@ function OfferInlineModal({
   locked: boolean;
 }) {
   const [totalPrice, setTotalPrice] = useState("");
-  const [currency, setCurrency] = useState("EGP");
-  const [milestones, setMilestones] = useState<Milestone[]>([{ title: "", amount: "", days: "" }]);
+  const [currency] = useState("EGP");
+  const [milestones, setMilestones] = useState<Milestone[]>([
+    { title: "", durationAmount: "", durationUnit: "days", priceAmount: "" },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setTotalPrice("");
-      setCurrency("EGP");
-      setMilestones([{ title: "", amount: "", days: "" }]);
+      setMilestones([{ title: "", durationAmount: "", durationUnit: "days", priceAmount: "" }]);
       setSubmitting(false);
       setServerError(null);
     }
@@ -127,8 +142,18 @@ function OfferInlineModal({
     return Number.isFinite(n) ? n : 0;
   };
 
+  const UNIT_TO_DAYS: Record<Milestone["durationUnit"], number> = {
+    days: 1,
+    weeks: 7,
+    months: 30,
+  };
+
   const totalPriceNum = toNum(totalPrice);
-  const sumMilestones = milestones.reduce((acc, m) => acc + toNum(m.amount), 0);
+  const sumMilestones = milestones.reduce((acc, m) => acc + toNum(m.priceAmount), 0);
+  const totalDays = milestones.reduce(
+    (acc, m) => acc + Math.round(toNum(m.durationAmount) * UNIT_TO_DAYS[m.durationUnit]),
+    0
+  );
 
   const missing: string[] = [];
   if (!clientId) missing.push("client");
@@ -137,20 +162,24 @@ function OfferInlineModal({
 
   const amountsValid =
     milestones.length > 0 &&
-    milestones.every((m) => toNum(m.amount) > 0 && (m.title || "").trim().length > 0);
+    milestones.every((m) => toNum(m.priceAmount) > 0 && (m.title || "").trim().length > 0);
 
-  const durationValid = milestones.every((m) => Number.isFinite(Number(m.days)) && toNum(m.days) >= 0);
+  const durationValid = milestones.every((m) => {
+    const amount = toNum(m.durationAmount);
+    return amount > 0 && Number.isFinite(amount);
+  });
 
   const sumMatchesTotal = totalPriceNum > 0 && Math.abs(sumMilestones - totalPriceNum) < 0.0001;
 
   const canSubmit = !locked && !missing.length && amountsValid && durationValid && sumMatchesTotal && !submitting;
 
-  const addMilestone = () => setMilestones((m) => [...m, { title: "", amount: "", days: "" }]);
+  const addMilestone = () =>
+    setMilestones((m) => [...m, { title: "", durationAmount: "", durationUnit: "days", priceAmount: "" }]);
   const removeMilestone = (idx: number) => setMilestones((m) => (m.length > 1 ? m.filter((_, i) => i !== idx) : m));
   const updateMilestone = (idx: number, key: keyof Milestone, val: string) =>
     setMilestones((m) => {
       const c = [...m];
-      c[idx] = { ...c[idx], [key]: val };
+      c[idx] = { ...c[idx], [key]: val } as Milestone;
       return c;
     });
 
@@ -174,8 +203,8 @@ function OfferInlineModal({
         milestones: milestones.map((m, i) => ({
           order: i + 1,
           title: (m.title || "").trim(),
-          amount: toNum(m.amount),
-          days: toNum(m.days),
+          amount: toNum(m.priceAmount),
+          days: Math.round(toNum(m.durationAmount) * UNIT_TO_DAYS[m.durationUnit]),
         })),
       };
 
@@ -244,7 +273,7 @@ function OfferInlineModal({
               )}
 
               <div className="space-y-5">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 space-y-1.5">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1 pt-2">
                       Total Price
@@ -259,25 +288,9 @@ function OfferInlineModal({
                     {!sumMatchesTotal && totalPrice && (
                       <p className="text-[11px] text-amber-500 pl-2 font-medium">Milestones sum must equal total.</p>
                     )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1 pt-2">Currency</label>
-                    <div className="relative">
-                      <select
-                        value={currency}
-                        onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full appearance-none rounded-2xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm font-bold text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all outline-none"
-                        disabled={locked}
-                      >
-                        <option value="EGP">EGP</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">
-                        ▼
-                      </div>
-                    </div>
+                    <p className="text-[11px] text-gray-400 pl-2 font-medium">
+                      Total estimated time: {formatDaysAsLabel(totalDays)}
+                    </p>
                   </div>
                 </div>
 
@@ -290,7 +303,7 @@ function OfferInlineModal({
                       className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
                       disabled={locked}
                     >
-                      <span>+</span> Add Phase
+                      <span>+</span> Add Item
                     </button>
                   </div>
 
@@ -298,53 +311,53 @@ function OfferInlineModal({
                     {milestones.map((m, i) => (
                       <div
                         key={i}
-                        className="rounded-[24px] border border-gray-100 bg-white p-4 shadow-sm hover:border-gray-200 transition-colors"
+                        className="p-3 rounded-2xl border border-gray-100 hover:border-blue-100 transition-colors bg-white"
                       >
-                        <div className="space-y-3">
+                        <input
+                          placeholder="Milestone / Task Name"
+                          value={m.title}
+                          onChange={(e) => updateMilestone(i, "title", e.target.value)}
+                          className="w-full text-sm font-bold text-gray-900 placeholder:text-gray-300 border-none p-0 focus:ring-0 mb-2"
+                          disabled={locked}
+                        />
+                        <div className="flex gap-2 items-center">
                           <input
-                            value={m.title}
-                            onChange={(e) => updateMilestone(i, "title", e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 bg-gray-50/30 px-3 py-2.5 text-sm font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none placeholder:text-gray-400"
-                            placeholder={`Phase ${i + 1} Title`}
+                            type="number"
+                            placeholder="Duration"
+                            value={m.durationAmount}
+                            onChange={(e) => updateMilestone(i, "durationAmount", e.target.value)}
+                            className="w-20 bg-gray-50 rounded-lg border-none text-xs font-medium py-1.5 px-2"
                             disabled={locked}
                           />
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="relative">
-                              <input
-                                value={m.amount}
-                                onChange={(e) => updateMilestone(i, "amount", e.target.value.replace(/[^\d.]/g, ""))}
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50/30 pl-3 pr-8 py-2.5 text-sm font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none placeholder:text-gray-400"
-                                placeholder="0.00"
-                                disabled={locked}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
-                                $
-                              </div>
-                            </div>
-                            <div className="relative">
-                              <input
-                                value={m.days}
-                                onChange={(e) => updateMilestone(i, "days", e.target.value.replace(/[^\d]/g, ""))}
-                                className="w-full rounded-xl border border-gray-200 bg-gray-50/30 pl-3 pr-10 py-2.5 text-sm font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all outline-none placeholder:text-gray-400"
-                                placeholder="0"
-                                disabled={locked}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">
-                                Days
-                              </div>
-                            </div>
+                          <select
+                            value={m.durationUnit}
+                            onChange={(e) => updateMilestone(i, "durationUnit", e.target.value)}
+                            className="bg-gray-50 rounded-lg border-none text-xs font-medium py-1.5 px-2"
+                            disabled={locked}
+                          >
+                            <option value="days">Days</option>
+                            <option value="weeks">Weeks</option>
+                            <option value="months">Months</option>
+                          </select>
+                          <div className="flex-1 flex bg-gray-50 rounded-lg items-center px-2">
+                            <input
+                              placeholder="Price"
+                              value={m.priceAmount}
+                              onChange={(e) => updateMilestone(i, "priceAmount", e.target.value)}
+                              className="flex-1 bg-transparent border-none text-xs font-medium py-1.5 p-0 focus:ring-0 text-right"
+                              disabled={locked}
+                            />
+                            <span className="text-[10px] text-gray-400 font-bold ml-1">{currency}</span>
                           </div>
                           {milestones.length > 1 && (
-                            <div className="flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() => removeMilestone(i)}
-                                className="text-[11px] font-bold text-red-400 hover:text-red-600 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
-                                disabled={locked}
-                              >
-                                Remove Phase
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeMilestone(i)}
+                              className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors"
+                              disabled={locked}
+                            >
+                              &times;
+                            </button>
                           )}
                         </div>
                       </div>
@@ -372,7 +385,7 @@ function OfferInlineModal({
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSubmit}
-                className="px-8 py-2.5 rounded-[18px] bg-[#007AFF] text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] hover:shadow-blue-500/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:scale-100"
+                className="px-8 py-2.5 rounded-[18px] bg-[#10b8a6] text-white text-sm font-bold shadow-lg shadow-[#10b8a6]/20 hover:scale-[1.02] hover:shadow-[#10b8a6]/30 hover:bg-[#0e9f8e] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:scale-100"
               >
                 {submitting ? "Sending..." : "Send Offer"}
               </button>

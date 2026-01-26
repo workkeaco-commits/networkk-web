@@ -784,14 +784,9 @@ function JobsPageContent() {
               <div className="flex gap-4 mb-6">
                 <div className="w-1/2">
                   <label className="text-xs font-bold text-gray-500 ml-1 mb-1.5 block">Currency</label>
-                  <select
-                    value={form.currency}
-                    onChange={handleCurrencyChange}
-                    className="w-full h-12 rounded-xl bg-gray-50 border-transparent font-medium px-4 focus:ring-2 focus:ring-black focus:bg-white transition-all"
-                  >
-                    <option value="EGP">EGP (Egyptian Pound)</option>
-                    <option value="USD">USD (US Dollar)</option>
-                  </select>
+                  <div className="h-12 flex items-center px-4 rounded-xl bg-gray-50 border-transparent text-gray-500 font-medium">
+                    {form.currency}
+                  </div>
                 </div>
                 <div className="w-1/2">
                   <label className="text-xs font-bold text-gray-500 ml-1 mb-1.5 block">Platform Fee</label>
@@ -853,7 +848,6 @@ function JobsPageContent() {
                             <option value="months">Months</option>
                           </select>
                           <div className="flex-1 flex bg-gray-50 rounded-lg items-center px-2">
-                            <span className="text-xs text-gray-400 mr-1">$</span>
                             <input
                               placeholder="Price"
                               value={m.priceAmount}
