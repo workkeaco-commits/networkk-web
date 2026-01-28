@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { defaultOgImage, siteName } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -34,5 +35,20 @@ export default function FreelancerSignupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <div className="min-h-screen bg-white">
+      <header className="border-b border-gray-200/50">
+        <div className="max-w-[1200px] mx-auto px-6 h-[52px] flex items-center">
+          <Link href="/" className="inline-flex items-center">
+            <img
+              src="/logo-sf-display.png"
+              alt="Networkk"
+              className="h-[38.4px] w-auto object-contain"
+            />
+          </Link>
+        </div>
+      </header>
+      {children}
+    </div>
+  );
 }
