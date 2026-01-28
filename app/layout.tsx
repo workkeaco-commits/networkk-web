@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import StickyMessagesButton from "@/components/StickyMessagesButton";
 import AuthRedirect from "@/components/AuthRedirect";
@@ -53,6 +54,7 @@ export default function RootLayout({
           <AuthRedirect />
         </Suspense>
         <StickyMessagesButton />
+        <Analytics />
       </body>
     </html>
   );
