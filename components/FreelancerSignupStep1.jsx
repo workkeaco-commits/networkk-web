@@ -76,7 +76,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
           )}
 
           <form className="space-y-6 text-left" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="firstName" className="text-[13px] font-medium text-gray-500 ml-1">
                   First name
@@ -129,7 +129,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="password" className="text-[13px] font-medium text-gray-500 ml-1">
                   Password
@@ -164,7 +164,7 @@ export default function FreelancerSignupStep1({ onNext, submitting = false }) {
               <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
                 Password criteria
               </p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 <span className={passwordChecks.length ? "text-[#10b8a6]" : "text-gray-400"}>
                   8+ characters
                 </span>

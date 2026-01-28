@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, FormEvent, KeyboardEvent, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
-import { Send, FileText, Loader2 } from "lucide-react";
+import { Send, FileText, Loader2, ChevronLeft } from "lucide-react";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import ChatLayout, { ChatSidebar, ChatWindow } from "@/components/chat/ChatLayout";
 import ConversationList from "@/components/chat/ConversationList";
@@ -1034,35 +1034,44 @@ function ClientMessagesContent() {
 
   return (
     <div className="flex h-screen bg-[#fbfbfd]">
-      <DashboardSidebar onSignOut={handleSignOut} />
+      <DashboardSidebar onSignOut={handleSignOut} hideMobileToggle={!!selectedId} />
 
-      <div className="flex-1 ml-64 h-screen max-h-screen overflow-hidden">
+      <div className="flex-1 ml-0 md:ml-64 h-screen max-h-screen overflow-hidden">
         <ChatLayout>
-          <ChatSidebar title="Messages">
-            <ConversationList
-              conversations={sortedConversations}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              getAvatar={(c: Conversation) => ({
-                url: c.freelancer?.personal_img_url || null,
-                fallback: initials(displayFreelancerName(c.freelancer)),
-              })}
-              getName={(c: Conversation) => displayFreelancerName(c.freelancer)}
-              getPreview={(c: Conversation) =>
-                formatPreview(c.last_message_body) || c.job_posts?.title || "Project Inquiry"
-              }
-              getTime={(c: Conversation) =>
-                c.last_message_at
-                  ? new Date(c.last_message_at as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
-                  : ""
-              }
-              getUnreadCount={(c: Conversation) => c.unread_count || 0}
-            />
-          </ChatSidebar>
+          <div className={selectedId ? "hidden md:block" : "block"}>
+            <ChatSidebar title="Messages">
+              <ConversationList
+                conversations={sortedConversations}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                getAvatar={(c: Conversation) => ({
+                  url: c.freelancer?.personal_img_url || null,
+                  fallback: initials(displayFreelancerName(c.freelancer)),
+                })}
+                getName={(c: Conversation) => displayFreelancerName(c.freelancer)}
+                getPreview={(c: Conversation) =>
+                  formatPreview(c.last_message_body) || c.job_posts?.title || "Project Inquiry"
+                }
+                getTime={(c: Conversation) =>
+                  c.last_message_at
+                    ? new Date(c.last_message_at as string).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+                    : ""
+                }
+                getUnreadCount={(c: Conversation) => c.unread_count || 0}
+              />
+            </ChatSidebar>
+          </div>
 
           <ChatWindow selectedId={selectedId}>
-            <div className="h-[70px] border-b border-gray-100 flex items-center justify-between px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-              <div className="flex items-center gap-3">
+            <div className="h-[70px] border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => setSelectedId(null)}
+                  className="md:hidden -ml-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                  aria-label="Back to conversations"
+                >
+                  <ChevronLeft size={18} />
+                </button>
                 <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-100 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-500">
                   {selectedConv?.freelancer?.personal_img_url && headerImgOk ? (
                     <img
@@ -1083,10 +1092,10 @@ function ClientMessagesContent() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setOfferModalOpen(true)}
-                  className="flex items-center gap-2 bg-[#10b8a6] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#0e9f8e] transition-all shadow-md active:scale-95"
+                  className="flex items-center gap-2 bg-[#10b8a6] text-white px-3 sm:px-4 py-2 rounded-full text-xs font-bold hover:bg-[#0e9f8e] transition-all shadow-md active:scale-95"
                 >
                   <FileText size={14} />
-                  <span>Create Offer</span>
+                  <span className="hidden sm:inline">Create Offer</span>
                 </button>
               </div>
             </div>

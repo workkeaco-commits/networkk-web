@@ -12,12 +12,14 @@ import {
     ChevronRight,
     FileText,
     Wallet,
+    Menu,
 } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import { supabase } from "@/lib/supabase/browser";
 
-export default function FreelancerSidebar({ onSignOut }) {
+export default function FreelancerSidebar({ onSignOut, hideMobileToggle = false }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const pathname = usePathname();
 
@@ -60,14 +62,32 @@ export default function FreelancerSidebar({ onSignOut }) {
     }, []);
 
     return (
-        <aside
-            className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-100 transition-all duration-300 ease-in-out z-50 flex flex-col ${isCollapsed ? "w-20" : "w-64"
-                }`}
-        >
+        <>
+            {!hideMobileToggle && (
+                <button
+                    onClick={() => setIsMobileOpen(true)}
+                    className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-600 shadow-sm md:hidden"
+                    aria-label="Open menu"
+                >
+                    <Menu size={18} />
+                </button>
+            )}
+            {isMobileOpen && (
+                <button
+                    className="fixed inset-0 z-40 bg-black/30 md:hidden"
+                    onClick={() => setIsMobileOpen(false)}
+                    aria-label="Close menu"
+                />
+            )}
+            <aside
+                className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-100 bg-white transition-all duration-300 ease-in-out ${
+                    isMobileOpen ? "translate-x-0" : "-translate-x-full"
+                } w-64 ${isCollapsed ? "md:w-20" : "md:w-64"} md:translate-x-0`}
+            >
             {/* Sidebar Toggle */}
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute -right-3 top-10 w-6 h-6 bg-white border border-gray-100 rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-black transition-colors"
+                className="absolute -right-3 top-10 hidden h-6 w-6 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-400 shadow-sm transition-colors hover:text-black md:flex"
             >
                 {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
             </button>
@@ -102,6 +122,7 @@ export default function FreelancerSidebar({ onSignOut }) {
                                 ? "bg-gray-900 text-white"
                                 : "text-gray-500 hover:bg-gray-50 hover:text-black"
                                 }`}
+                            onClick={() => setIsMobileOpen(false)}
                         >
                             <Icon
                                 size={22}
@@ -138,5 +159,6 @@ export default function FreelancerSidebar({ onSignOut }) {
                 </button>
             </div>
         </aside>
+        </>
     );
 }

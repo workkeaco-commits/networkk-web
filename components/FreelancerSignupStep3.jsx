@@ -164,7 +164,7 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
             {/* EDUCATION SECTION */}
             <div className="space-y-6 text-left">
               <label className="text-[14px] font-semibold text-gray-900 ml-1">Education Status</label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setEduStatus("graduated")}
@@ -201,7 +201,7 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                       className="w-full bg-white border border-gray-200 rounded-[18px] px-5 py-3.5 text-sm focus:border-[#10b8a6] focus:ring-4 focus:ring-[#10b8a6]/5 outline-none transition-all shadow-sm"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="degree" className="text-[13px] font-medium text-gray-500 ml-1">Degree</label>
                       <input
@@ -257,7 +257,7 @@ export default function FreelancerSignupStep3({ onBack, onNext, submitting = fal
                       placeholder="Certification Name (e.g. AWS Certified Developer)"
                       className="w-full text-lg font-semibold bg-transparent placeholder:text-gray-200 focus:outline-none"
                     />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <input
                         id={`certOrg-${index}`} name={`certOrg-${index}`} type="text" placeholder="Organization"
                         className="w-full bg-gray-50 border-none rounded-[14px] px-4 py-3 text-sm focus:ring-2 focus:ring-[#10b8a6]/10 outline-none"

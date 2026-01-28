@@ -933,7 +933,7 @@ function MonthPicker({
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {MONTHS.map((month) => {
               const monthValue = formatMonthValue(viewYear, month.value);
               const isSelected = value === monthValue;

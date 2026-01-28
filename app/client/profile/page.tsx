@@ -510,7 +510,7 @@ export default function ClientProfilePage() {
         <div className="flex min-h-screen bg-[#fafafa]">
             <DashboardSidebar onSignOut={handleSignOut} />
 
-            <main className={`flex-1 ml-64 p-8 lg:p-12 ${editMode ? "relative overflow-hidden" : ""}`}>
+            <main className={`flex-1 ml-0 md:ml-64 p-8 lg:p-12 ${editMode ? "relative overflow-hidden" : ""}`}>
                 <div className={`max-w-4xl mx-auto transition-all duration-300 ${editMode ? "pointer-events-none select-none opacity-60" : ""}`}>
                     {renderHeader(false, "page")}
                     {renderFeedback(!editMode)}

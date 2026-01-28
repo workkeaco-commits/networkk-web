@@ -90,7 +90,7 @@ export default function ClientSignupPage() {
                 How will you use Networkk?
               </label>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setAccountType("company")}
@@ -151,7 +151,7 @@ export default function ClientSignupPage() {
 
             {/* FORM FIELDS */}
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="firstName" className="text-[13px] font-medium text-gray-500 ml-1">
                     First name
@@ -194,7 +194,7 @@ export default function ClientSignupPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="companyField" className="text-[13px] font-medium text-gray-500 ml-1">
                         Industry
@@ -250,7 +250,7 @@ export default function ClientSignupPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="password" className="text-[13px] font-medium text-gray-500 ml-1">
                     Password
@@ -283,7 +283,7 @@ export default function ClientSignupPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-2">
                   Password criteria
                 </p>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   <span className={passwordChecks.length ? "text-[#10b8a6]" : "text-gray-400"}>
                     8+ characters
                   </span>

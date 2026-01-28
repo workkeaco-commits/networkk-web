@@ -538,7 +538,7 @@ function JobsPageContent() {
       <FreelancerSidebar onSignOut={handleSignOut} />
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8 lg:p-12 relative z-0">
+      <main className="flex-1 ml-0 md:ml-64 p-8 lg:p-12 relative z-0">
         <div className="max-w-3xl mx-auto space-y-8">
           {/* Header */}
           <div>
